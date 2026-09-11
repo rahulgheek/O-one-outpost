@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "8081:8081"
+    env_file:
+      - ./auth-service/.env
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+
+  analytics-service:
+    build: ./analytics-service
+    ports:
+      - "8082:8082"
+    env_file:
+      - ./analytics-service/.env
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - ASSESSMENT_SERVICE_URL=http://assessment-service:8083
+      - ARENA_SERVICE_URL=http://arena-service:8084
+      - SANDBOX_URL=http://code-sandbox:8085
+      - GATEWAY_URL=http://gateway-service:8080
+
+  assessment-service:
+    build: ./assessment-service
+    ports:
+      - "8083:8083"
+    env_file:
+      - ./assessment-service/.env
+    environment:
+      - SANDBOX_URL=http://code-sandbox:8085/api/sandbox/execute
+
+  arena-service:
+    build: ./arena-service
+    ports:
+      - "8084:8084"
+    env_file:
+      - ./arena-service/.env
+    environment:
+      - SANDBOX_URL=http://code-sandbox:8085/api/sandbox/execute
+
+  code-sandbox:
+    build: ./code-sandbox
+    ports:
+      - "8085:8085"
+    env_file:
+      - ./code-sandbox/.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  gateway-service:
+    build: ./gateway-service
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./gateway-service/.env
+    depends_on:
+      - auth-service
+      - arena-service
+      - analytics-service
+      - assessment-service
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - ARENA_SERVICE_URL=http://arena-service:8084
+      - ARENA_WS_URL=ws://arena-service:8084
+      - ANALYTICS_SERVICE_URL=http://analytics-service:8082
+      - ASSESSMENT_SERVICE_URL=http://assessment-service:8083
+

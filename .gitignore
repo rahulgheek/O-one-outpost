@@ -1,0 +1,11 @@
+node_modules/
+target/
+.idea/
+*.class
+*.jar
+*.war
+
+# Environment variables
+.env
+.env.local
+.env.*.local

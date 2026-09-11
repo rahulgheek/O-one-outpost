@@ -1,0 +1,16 @@
+server:
+  port: 8084
+
+spring:
+  main:
+    lazy-initialization: true
+  application:
+    name: arena-service
+  config:
+    import: optional:file:./arena-service/.env[.properties], optional:file:.env[.properties]
+  data:
+    mongodb:
+      uri: ${ARENA_MONGO_URI}
+
+sandbox:
+  url: ${SANDBOX_URL}

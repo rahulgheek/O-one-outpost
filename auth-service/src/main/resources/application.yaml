@@ -1,0 +1,55 @@
+server:
+  port: 8081
+
+spring:
+  main:
+    lazy-initialization: true
+  application:
+    name: auth-service
+  config:
+    import: optional:file:./auth-service/.env[.properties], optional:file:.env[.properties]
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Redis Configuration (Temporary OTP Store)
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: 6379
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000
+
+logging:
+  level:
+    com.aegis.auth_service: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+
+  # Email Configuration (Temporarily Disabled for Dev Mode)
+  # We will mock the email service in Java and print the OTP to the console instead
+  # mail:
+  #   host: sandbox.smtp.mailtrap.io
+  #   port: 2525
+  #   username: your_mailtrap_username
+  #   password: your_mailtrap_password
+  #   properties:
+  #     mail:
+  #       smtp:
+  #         auth: true
+  #         starttls:
+  #           enable: true
