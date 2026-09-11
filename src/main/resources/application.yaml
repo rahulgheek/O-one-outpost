@@ -1,0 +1,6 @@
+server:
+  port: 8085 # 8080 is Gateway, 8084 is Arena, 8085 is Sandbox
+
+spring:
+  application:
+    name: code-sandbox
