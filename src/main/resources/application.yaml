@@ -1,0 +1,18 @@
+spring:
+  main:
+    lazy-initialization: true
+  application:
+    name: assessment-service
+  config:
+    import: optional:file:./assessment-service/.env[.properties], optional:file:.env[.properties]
+  jackson:
+    time-zone: Asia/Kolkata
+  data:
+    mongodb:
+      uri: ${ASSESSMENT_MONGO_URI}
+
+server:
+  port: 8083
+
+sandbox:
+  url: ${SANDBOX_URL:http://localhost:8085/api/sandbox/execute}
