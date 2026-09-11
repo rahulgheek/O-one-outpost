@@ -1,0 +1,38 @@
+server:
+  port: 8082
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    com.aegis.analytics_service: DEBUG
+
+spring:
+  main:
+    lazy-initialization: true
+  application:
+    name: analytics-service
+  config:
+    import: optional:file:./analytics-service/.env[.properties], optional:file:.env[.properties]
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+services:
+  urls:
+    auth: ${AUTH_SERVICE_URL:http://localhost:8081}
+    assessment: ${ASSESSMENT_SERVICE_URL:http://localhost:8083}
+    arena: ${ARENA_SERVICE_URL:http://localhost:8084}
+    sandbox: ${SANDBOX_URL:http://localhost:8085}
+    gateway: ${GATEWAY_URL:http://localhost:8080}
