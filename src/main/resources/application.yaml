@@ -1,0 +1,92 @@
+server:
+  port: 8080
+
+spring:
+  main:
+    lazy-initialization: true
+  application:
+    name: gateway-service
+  config:
+    import: optional:file:./gateway-service/.env[.properties], optional:file:.env[.properties]
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: 6379
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: 5000
+            response-timeout: 10s
+
+          routes:
+            # ── Auth Service (no auth filter — these are public endpoints) ──
+            - id: auth-service
+              uri: ${AUTH_SERVICE_URL}
+              predicates:
+                - Path=/api/auth/**
+
+            # ── Daily Question (PUBLIC — no auth, time-lock enforced server-side) ──
+            - id: daily-question-public
+              uri: ${ARENA_SERVICE_URL}
+              predicates:
+                - Path=/api/problems/daily
+
+            # ── Arena Service (protected) ──
+            - id: arena-service
+              uri: ${ARENA_SERVICE_URL}
+              predicates:
+                - Path=/api/match/**, /api/problems/**, /api/profiles/**, /api/arena/**
+              filters:
+                - IpBlockingFilter
+                - AuthenticationFilter
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    key-resolver: "#{@userKeyResolver}"
+
+            # ── Arena WebSocket (no JWT filter — browsers can't send Bearer on WS) ──
+            - id: arena-websocket
+              uri: ${ARENA_WS_URL}
+              predicates:
+                - Path=/ws-arena/**
+
+            # ── Analytics Service (protected) ──
+            - id: analytics-service
+              uri: ${ANALYTICS_SERVICE_URL}
+              predicates:
+                - Path=/api/analytics/**
+              filters:
+                - IpBlockingFilter
+                - AuthenticationFilter
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    key-resolver: "#{@userKeyResolver}"
+
+            # ── Assessment Service (protected) ──
+            - id: assessment-service
+              uri: ${ASSESSMENT_SERVICE_URL}
+              predicates:
+                - Path=/api/candidate/**, /api/assessment/**
+              filters:
+                - IpBlockingFilter
+                - AuthenticationFilter
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    key-resolver: "#{@userKeyResolver}"
+
+jwt:
+  secret: ${JWT_SECRET}
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    com.aegis.gateway_service: DEBUG
+    reactor.netty.http.server.HttpServerOperations: ERROR
