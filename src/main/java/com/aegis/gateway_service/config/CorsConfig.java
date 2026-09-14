@@ -16,8 +16,12 @@ public class CorsConfig {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
 
-        // Allow all origin patterns for local dev and production deployment (supports credentials)
-        corsConfig.setAllowedOriginPatterns(List.of("*"));
+        // Allow the production Vercel frontend and localhost for dev
+        corsConfig.setAllowedOriginPatterns(Arrays.asList(
+                "https://ooneoutpost-five.vercel.app",
+                "https://*.vercel.app",
+                "http://localhost:*"
+        ));
 
 
         // Allow all standard HTTP methods + OPTIONS for the preflight
