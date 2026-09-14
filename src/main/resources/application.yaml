@@ -14,3 +14,6 @@ spring:
 
 sandbox:
   url: ${SANDBOX_URL}
+
+internal:
+  secret: ${INTERNAL_SECRET:}
