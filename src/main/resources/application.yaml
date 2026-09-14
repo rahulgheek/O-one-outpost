@@ -4,3 +4,8 @@ server:
 spring:
   application:
     name: code-sandbox
+  config:
+    import: optional:file:./code-sandbox/.env[.properties], optional:file:.env[.properties]
+
+internal:
+  secret: ${INTERNAL_SECRET:}

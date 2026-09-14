@@ -9,7 +9,7 @@ import java.util.concurrent.*;
 @Component
 public class ContainerPool {
 
-    private static final int POOL_SIZE = 5;
+    private static final int POOL_SIZE = 3;
     private static final String IMAGE = "eclipse-temurin:17-alpine";
 
     private final BlockingQueue<String> availableContainers = new LinkedBlockingQueue<>();
@@ -65,11 +65,14 @@ public class ContainerPool {
                 "--name", name,
                 "-d",
                 "--network", "none",
-                "--memory=256m",
-                "--memory-swap=256m",
-                "--cpus=1.0",
+                "--memory=128m",
+                "--memory-swap=128m",
+                "--cpus=0.5",
+                "--read-only",
+                "--tmpfs", "/app:rw,noexec,size=32m",
+                "--tmpfs", "/tmp:rw,noexec,size=16m",
                 IMAGE,
-                "sh", "-c", "mkdir -p /app && tail -f /dev/null"
+                "tail", "-f", "/dev/null"
         };
 
         Process p = new ProcessBuilder(cmd).start();
