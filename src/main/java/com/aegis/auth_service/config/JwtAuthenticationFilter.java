@@ -70,11 +70,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            // Token is expired → return 401 so the frontend can auto sign-off
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"message\":\"Token expired. Please log in again.\"}");
+            return;
         } catch (Exception e) {
-            // If the token is expired, forged, or malformed, we just log it.
-            // We don't crash; we just let the filter chain continue without authenticating them,
-            // which results in a clean 403 Forbidden.
-            System.out.println("JWT Filter Rejected Token: " + e.getMessage());
+            // Token is forged or malformed → return 401
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"message\":\"Invalid token.\"}");
+            return;
         }
 
         // 7. Pass to the next filter in the chain
