@@ -27,20 +27,36 @@ public class AuthService {
     private final OtpService otpService;
     private final JwtService jwtService;
     private final AuthenticationProvider authenticationProvider;
+    private final MailService mailService;
 
     public String registerUser(RegisterRequest request) {
         Optional<User> existingUser = userRepository.findByEmail(request.email());
         if (existingUser.isPresent()) {
             if (existingUser.get().isEmailVerified()) {
-                throw new RuntimeException("User already exists");
+                throw new RuntimeException("User already exists and is verified. Please login.");
             }
+
+            // User exists but isn't verified -> Resend OTP with cooldown check
+            if (otpService.isOnCooldown(request.email())) {
+                long remaining = otpService.getCooldownSeconds(request.email());
+                throw new RuntimeException("Please wait " + remaining + " seconds before requesting another OTP.");
+            }
+
             String otp = generateOTP();
             otpService.saveOtp(request.email(), otp);
-            log.info("Resent OTP: {}", otp);
-            return "OTP resent. Please verify your email.";
+            otpService.startCooldown(request.email());
+
+            log.info("Resent OTP to unverified user: {}", request.email());
+            mailService.sendMail(
+                request.email(),
+                "Your O One Outpost Verification Code",
+                "Your verification code is: " + otp + "\n\nThis code will expire in 5 minutes."
+            );
+
+            return "OTP resent. Please check your email.";
         }
 
-        // --- NEW: DYNAMIC ROLE ASSIGNMENT ---
+        // --- DYNAMIC ROLE ASSIGNMENT ---
         Role assignedRole = Role.USER; // Default fallback
         if (request.role() != null && request.role().equalsIgnoreCase("COMPANY")) {
             assignedRole = Role.COMPANY;
@@ -49,7 +65,7 @@ public class AuthService {
         User user = User.builder()
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
-                .role(assignedRole) // <-- Inject the dynamically assigned role
+                .role(assignedRole)
                 .emailVerified(false)
                 .build();
 
@@ -57,15 +73,43 @@ public class AuthService {
 
         String otp = generateOTP();
         otpService.saveOtp(request.email(), otp);
+        otpService.startCooldown(request.email());
 
-        System.out.println("\n========================================");
-        System.out.println("DEV MODE: EMAIL MOCKED");
-        System.out.println("To: " + request.email());
-        System.out.println("OTP: " + otp);
-        System.out.println("Role Assigned: " + assignedRole);
-        System.out.println("========================================\n");
+        log.info("Sending OTP to {}", request.email());
+        mailService.sendMail(
+            request.email(),
+            "Welcome to O One Outpost! Verification Code",
+            "Your verification code is: " + otp + "\n\nThis code will expire in 5 minutes."
+        );
 
-        return "User registration request initiated";
+        return "User registration request initiated. Check your email for the OTP.";
+    }
+
+    public String resendOtp(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User does not exist."));
+
+        if (user.isEmailVerified()) {
+            throw new RuntimeException("User already verified. Please login.");
+        }
+
+        if (otpService.isOnCooldown(email)) {
+            long remaining = otpService.getCooldownSeconds(email);
+            throw new RuntimeException("Please wait " + remaining + " seconds before requesting another OTP.");
+        }
+
+        String otp = generateOTP();
+        otpService.saveOtp(email, otp);
+        otpService.startCooldown(email);
+
+        log.info("Resent OTP to unverified user: {}", email);
+        mailService.sendMail(
+            email,
+            "Your AlgoArena Verification Code",
+            "Your verification code is: " + otp + "\n\nThis code will expire in 5 minutes."
+        );
+
+        return "OTP resent. Please check your email.";
     }
 
     public String generateOTP() {

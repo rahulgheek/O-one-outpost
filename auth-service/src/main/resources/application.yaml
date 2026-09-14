@@ -24,32 +24,38 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  # Redis Configuration (Temporary OTP Store)
+  # Redis Configuration (External Upstash Redis with TLS)
   data:
     redis:
       host: ${REDIS_HOST}
-      port: 6379
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      ssl:
+        enabled: true
+
+  # Email Configuration (Brevo SMTP Relay)
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    from: ${MAIL_FROM}
 
 jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000
+
+internal:
+  secret: ${INTERNAL_SECRET:}
 
 logging:
   level:
     com.aegis.auth_service: DEBUG
     org.springframework.security: DEBUG
     org.springframework.web: DEBUG
-
-  # Email Configuration (Temporarily Disabled for Dev Mode)
-  # We will mock the email service in Java and print the OTP to the console instead
-  # mail:
-  #   host: sandbox.smtp.mailtrap.io
-  #   port: 2525
-  #   username: your_mailtrap_username
-  #   password: your_mailtrap_password
-  #   properties:
-  #     mail:
-  #       smtp:
-  #         auth: true
-  #         starttls:
-  #           enable: true

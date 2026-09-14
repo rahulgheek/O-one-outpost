@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { getCurrentRole, syncAuthRole } from './utils/auth';
+import { getCurrentRole, syncAuthRole, startTokenExpiryWatcher } from './utils/auth';
 import './App.css';
 
 // --- Existing Core Pages ---
@@ -75,7 +75,11 @@ export default function App() {
   useEffect(() => {
     // Re-synchronize role from JWT payload if stored value was corrupted or stale
     syncAuthRole();
-  }, []);
+
+    // Start a proactive watcher that auto-signs out when the JWT expires
+    const cleanupWatcher = startTokenExpiryWatcher();
+    return () => cleanupWatcher();
+  }, [currentUser]);
 
   useEffect(() => {
     const handleServerDown = () => setIsServerDown(true);

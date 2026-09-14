@@ -16,6 +16,13 @@ services:
       - redis
     environment:
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM=${MAIL_FROM}
 
   analytics-service:
     build: ./analytics-service
@@ -71,6 +78,8 @@ services:
       - redis
     environment:
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
       - AUTH_SERVICE_URL=http://auth-service:8081
       - ARENA_SERVICE_URL=http://arena-service:8084
       - ARENA_WS_URL=ws://arena-service:8084
