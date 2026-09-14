@@ -16,3 +16,6 @@ server:
 
 sandbox:
   url: ${SANDBOX_URL:http://localhost:8085/api/sandbox/execute}
+
+internal:
+  secret: ${INTERNAL_SECRET:}
