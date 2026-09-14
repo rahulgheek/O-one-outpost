@@ -36,3 +36,6 @@ services:
     arena: ${ARENA_SERVICE_URL:http://localhost:8084}
     sandbox: ${SANDBOX_URL:http://localhost:8085}
     gateway: ${GATEWAY_URL:http://localhost:8080}
+
+internal:
+  secret: ${INTERNAL_SECRET:}
