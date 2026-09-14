@@ -1,0 +1,101 @@
+services:
+  gateway-service:
+    image: rahulgheek/ooo-gateway-service:${IMAGE_TAG:-latest}
+    ports:
+      - "80:8080"
+    expose:
+      - "8080"
+    networks:
+      - internal
+    restart: unless-stopped
+    mem_limit: 512m
+    env_file:
+      - .env.prod
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - ARENA_SERVICE_URL=http://arena-service:8084
+      - ARENA_WS_URL=ws://arena-service:8084
+      - ANALYTICS_SERVICE_URL=http://analytics-service:8082
+      - ASSESSMENT_SERVICE_URL=http://assessment-service:8083
+    depends_on:
+      - auth-service
+      - arena-service
+      - analytics-service
+      - assessment-service
+
+  auth-service:
+    image: rahulgheek/ooo-auth-service:${IMAGE_TAG:-latest}
+    expose:
+      - "8081"
+    networks:
+      - internal
+    restart: unless-stopped
+    mem_limit: 448m
+    env_file:
+      - .env.prod
+
+  arena-service:
+    image: rahulgheek/ooo-arena-service:${IMAGE_TAG:-latest}
+    expose:
+      - "8084"
+    networks:
+      - internal
+    restart: unless-stopped
+    mem_limit: 512m
+    env_file:
+      - .env.prod
+    environment:
+      - SANDBOX_URL=http://code-sandbox:8085/api/sandbox/execute
+    depends_on:
+      - code-sandbox
+
+  assessment-service:
+    image: rahulgheek/ooo-assessment-service:${IMAGE_TAG:-latest}
+    expose:
+      - "8083"
+    networks:
+      - internal
+    restart: unless-stopped
+    mem_limit: 448m
+    env_file:
+      - .env.prod
+    environment:
+      - SANDBOX_URL=http://code-sandbox:8085/api/sandbox/execute
+    depends_on:
+      - code-sandbox
+
+  analytics-service:
+    image: rahulgheek/ooo-analytics-service:${IMAGE_TAG:-latest}
+    expose:
+      - "8082"
+    networks:
+      - internal
+    restart: unless-stopped
+    mem_limit: 384m
+    env_file:
+      - .env.prod
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - ASSESSMENT_SERVICE_URL=http://assessment-service:8083
+      - ARENA_SERVICE_URL=http://arena-service:8084
+      - SANDBOX_URL=http://code-sandbox:8085
+      - GATEWAY_URL=http://gateway-service:8080
+
+  code-sandbox:
+    image: rahulgheek/ooo-code-sandbox:${IMAGE_TAG:-latest}
+    expose:
+      - "8085"
+    networks:
+      - internal
+    restart: unless-stopped
+    mem_limit: 384m
+    env_file:
+      - .env.prod
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "${DOCKER_GID:-999}"
+
+networks:
+  internal:
+    driver: bridge
