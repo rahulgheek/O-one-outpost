@@ -76,6 +76,16 @@ cd ~/o-one-outpost
 # Create .env.prod from the template and fill in your real secrets
 nano .env.prod
 
+# Lock down file permissions — only the ubuntu user can read/write
+chmod 600 .env.prod
+
+# Strip Windows line endings if transferred from Windows
+sudo apt-get install -y dos2unix
+dos2unix .env.prod
+
+# Sanity check — verify content transferred correctly (no truncation)
+cat .env.prod
+
 # Find the Docker group ID (needed for code-sandbox socket access)
 getent group docker | cut -d: -f3
 # Set DOCKER_GID in .env.prod to this value
@@ -87,6 +97,8 @@ docker pull eclipse-temurin:17-alpine
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
+
+> **Security note**: Once `.env.prod` is confirmed working on the instance, delete the local copy from your Windows machine (Downloads, Desktop, etc.) or move it to a password manager. Never leave secrets in git-tracked folders.
 
 ## 5. Verify
 

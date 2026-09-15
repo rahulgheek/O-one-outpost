@@ -18,10 +18,25 @@ services:
       - ANALYTICS_SERVICE_URL=http://analytics-service:8082
       - ASSESSMENT_SERVICE_URL=http://assessment-service:8083
     depends_on:
-      - auth-service
-      - arena-service
-      - analytics-service
-      - assessment-service
+      auth-service:
+        condition: service_healthy
+      arena-service:
+        condition: service_healthy
+      analytics-service:
+        condition: service_healthy
+      assessment-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   auth-service:
     image: rahulgheek/ooo-auth-service:${IMAGE_TAG:-latest}
@@ -33,6 +48,17 @@ services:
     mem_limit: 448m
     env_file:
       - .env.prod
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:8081/", "-o", "/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   arena-service:
     image: rahulgheek/ooo-arena-service:${IMAGE_TAG:-latest}
@@ -47,7 +73,19 @@ services:
     environment:
       - SANDBOX_URL=http://code-sandbox:8085/api/sandbox/execute
     depends_on:
-      - code-sandbox
+      code-sandbox:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:8084/", "-o", "/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   assessment-service:
     image: rahulgheek/ooo-assessment-service:${IMAGE_TAG:-latest}
@@ -62,7 +100,19 @@ services:
     environment:
       - SANDBOX_URL=http://code-sandbox:8085/api/sandbox/execute
     depends_on:
-      - code-sandbox
+      code-sandbox:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:8083/", "-o", "/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   analytics-service:
     image: rahulgheek/ooo-analytics-service:${IMAGE_TAG:-latest}
@@ -80,6 +130,17 @@ services:
       - ARENA_SERVICE_URL=http://arena-service:8084
       - SANDBOX_URL=http://code-sandbox:8085
       - GATEWAY_URL=http://gateway-service:8080
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:8082/", "-o", "/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   code-sandbox:
     image: rahulgheek/ooo-code-sandbox:${IMAGE_TAG:-latest}
@@ -95,6 +156,17 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     group_add:
       - "${DOCKER_GID:-999}"
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:8085/", "-o", "/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   internal:
