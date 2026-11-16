@@ -1,4 +1,9 @@
-# O One Outpost — Production Deployment
+# O One Outpost — Production Deployment (legacy Docker/EC2)
+
+> **Legacy:** the current production topology is documented in
+> [`deploy/README.md`](../deploy/README.md) (Botkeep + sandbox VPS). This file
+> describes the original single-host Docker/EC2 deployment and is kept for
+> reference.
 
 ## Architecture Overview
 
@@ -31,7 +36,7 @@ Internet → [EC2 Security Group: 80/443 only]
 
 1. **Network isolation** (primary): Only the gateway has a published port (`80:8080`). All other services use `expose:` only — they live on an internal Docker bridge network and are unreachable from outside the EC2 host.
 
-2. **Shared secret header** (belt-and-suspenders): The gateway injects an `X-Internal-Token` header into every forwarded request. Each downstream service validates this header against a shared secret (`INTERNAL_SECRET` env var). Requests missing or mismatching the header get a `403 Forbidden`.
+2. **Shared secret header** (belt-and-suspenders): The gateway injects an `X-Internal-Token` header into every forwarded request. Each downstream service validates this header against a shared secret (`INTERNAL_SECRET` env var). Requests missing or mismatching the header get a `403 Forbidden`. The only exception is `/actuator/health` (and its probe sub-paths), which is deliberately public so per-host health checks work without the secret.
 
 3. **Dev-friendly**: When `INTERNAL_SECRET` is not set (empty string), both the gateway injection and downstream validation are no-ops. Local development works without any extra config.
 

@@ -1,5 +1,17 @@
 server:
   port: 8084
+  shutdown: graceful
+
+# Per-host probes hit /actuator/health without the internal token.
+# Expose only health; never expose the wider actuator surface.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
 
 spring:
   main:
@@ -17,3 +29,13 @@ sandbox:
 
 internal:
   secret: ${INTERNAL_SECRET:}
+
+# Origin patterns allowed to open the arena WebSocket directly.
+# Browser traffic should normally go through the gateway.
+arena:
+  allowed-origins: ${ARENA_ALLOWED_ORIGINS:*}
+
+logging:
+  level:
+    com.aegis.arena_service: ${LOG_LEVEL_ARENA:INFO}
+    org.springframework.web: ${LOG_LEVEL_WEB:INFO}

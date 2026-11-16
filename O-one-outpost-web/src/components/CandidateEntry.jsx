@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { candidateApi } from '../services/candidateApi';
+import { getApiErrorMessage } from '../utils/errors';
 
 export default function CandidateEntry() {
     const navigate = useNavigate();
@@ -32,8 +33,10 @@ export default function CandidateEntry() {
             
         } catch (error) {
             setStatus('ERROR');
-            // This grabs the exact error message from Spring Boot (e.g., "The assessment has not started yet.")
-            setErrorMessage(error.message || 'Invalid test code or assessment unavailable.');
+            // Prefer the server's specific business message (window closed, not registered, ...)
+            setErrorMessage(
+                getApiErrorMessage(error, 'Invalid test code or assessment unavailable.'),
+            );
         }
     };
 
@@ -45,6 +48,9 @@ export default function CandidateEntry() {
                         0% { opacity: 0.1; transform: scale(1); }
                         50% { opacity: 0.2; transform: scale(1.1); }
                         100% { opacity: 0.1; transform: scale(1); }
+                    }
+                    @keyframes spin {
+                        to { transform: rotate(360deg); }
                     }
                     .glass-form {
                         background: linear-gradient(135deg, rgba(20,10,5,0.8), rgba(0,0,0,0.9));
@@ -113,7 +119,7 @@ export default function CandidateEntry() {
                         cursor: pointer;
                         transition: all 0.3s;
                         box-shadow: 0 10px 25px rgba(255, 122, 0, 0.3);
-                        font-family: "'Inter', sans-serif";
+                        font-family: 'Inter', sans-serif;
                         text-transform: uppercase;
                         letter-spacing: 1px;
                         width: 100%;
@@ -179,10 +185,11 @@ export default function CandidateEntry() {
                     >
                         {status === 'LOADING' ? (
                             <>
-                                <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
+                                <i
+                                    className="bi bi-arrow-repeat"
+                                    aria-hidden="true"
+                                    style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}
+                                />
                                 AUTHENTICATING...
                             </>
                         ) : (

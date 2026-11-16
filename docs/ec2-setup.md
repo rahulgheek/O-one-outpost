@@ -1,4 +1,8 @@
-# O One Outpost — EC2 Setup Guide
+# O One Outpost — EC2 Setup Guide (legacy)
+
+> **Legacy:** the current production topology is documented in
+> [`deploy/README.md`](../deploy/README.md) (Botkeep + sandbox VPS). This guide
+> is kept for reference only.
 
 ## 1. Launch EC2 Instance
 

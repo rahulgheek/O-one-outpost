@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { getCurrentRole, syncAuthRole, startTokenExpiryWatcher } from './utils/auth';
@@ -47,7 +47,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   return children;
 }
 
-export const globalEventTarget = new EventTarget();
+const globalEventTarget = new EventTarget();
 
 axios.interceptors.response.use(
   (response) => response,
@@ -70,7 +70,6 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(localStorage.getItem('algo_arena_user'));
   const [isServerDown, setIsServerDown] = useState(false);
   const getToken = useCallback(() => localStorage.getItem('algo_arena_token'), []);
-  const handleLogout = useCallback(() => { localStorage.clear(); setCurrentUser(null); }, []);
 
   useEffect(() => {
     // Re-synchronize role from JWT payload if stored value was corrupted or stale

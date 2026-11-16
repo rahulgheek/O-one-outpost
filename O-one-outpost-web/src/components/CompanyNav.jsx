@@ -17,10 +17,10 @@ export default function CompanyNav() {
   };
 
   const links = [
-    { label: 'Dashboard', path: '/company/dashboard' },
-    { label: 'Question Bank', path: '/company/question-bank' },
-    { label: 'Tournaments', path: '/company/create-assessment' },
-    { label: 'Selection', path: '/company/selection' },
+    { label: 'Dashboard', path: '/company/dashboard', icon: 'bi-speedometer2' },
+    { label: 'Question Bank', path: '/company/question-bank', icon: 'bi-shield-lock' },
+    { label: 'Tournaments', path: '/company/create-assessment', icon: 'bi-calendar-plus' },
+    { label: 'Selection', path: '/company/selection', icon: 'bi-people' },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -94,6 +94,7 @@ export default function CompanyNav() {
                 className={`company-nav-link ${isActive(link.path) ? 'active' : ''}`}
                 onClick={() => navigate(link.path)}
               >
+                <i className={`bi ${link.icon}`} aria-hidden="true" style={{ marginRight: '7px' }} />
                 {link.label}
               </button>
             ))}

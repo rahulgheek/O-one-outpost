@@ -110,13 +110,6 @@ export default function Lobby({ currentUser, getToken }) {
     matchFoundRef.current = false;
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('algo_arena_token');
-    localStorage.removeItem('algo_arena_user');
-    localStorage.removeItem('algo_arena_role');
-    window.location.href = '/login';
-  };
-
   // Particle background canvas (subtle orange particles)
   useEffect(() => {
     const canvas = canvasRef.current;

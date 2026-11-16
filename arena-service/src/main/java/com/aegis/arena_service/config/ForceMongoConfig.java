@@ -14,7 +14,9 @@ public class ForceMongoConfig {
 
     @Bean
     public MongoClient mongoClient() {
-        System.out.println("====== FORCE INJECTING MONGO CLIENT: " + mongoUri + " ======");
+        // Never print credentials from the connection string into logs.
+        String safeUri = mongoUri.replaceAll("//[^@]*@", "//***@");
+        System.out.println("====== FORCE INJECTING MONGO CLIENT: " + safeUri + " ======");
         return MongoClients.create(mongoUri);
     }
 }

@@ -64,7 +64,6 @@ export default function Auth({ setAuth, initialMode = 'login' }) {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
   const [otpArray, setOtpArray] = useState(['', '', '', '', '', '']);
   const otpRefs = useRef([]);
   const [error, setError] = useState('');
@@ -82,14 +81,9 @@ export default function Auth({ setAuth, initialMode = 'login' }) {
   useEffect(() => {
     setError('');
     setSuccess('');
-    setOtp('');
     setOtpArray(['', '', '', '', '', '']);
     if (isLogin) setIsOtpMode(false);
   }, [isLogin]);
-
-  useEffect(() => {
-    setOtp(otpArray.join(''));
-  }, [otpArray]);
 
   const handleOtpChange = (e, index) => {
     const val = e.target.value.replace(/\D/g, '');

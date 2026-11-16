@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { candidateApi } from '../services/candidateApi';
-import api from '../services/api';
+import { getApiErrorMessage } from '../utils/errors';
 import EngineerNav from './EngineerNav';
 
 export default function TournamentRegistration({ currentUser }) {
@@ -48,9 +48,9 @@ export default function TournamentRegistration({ currentUser }) {
             };
 
             await candidateApi.registerForTournament(assessmentId, payload);
-            navigate('/dashboard'); // Send them to the dashboard on success!
+            navigate('/candidate/dashboard');
         } catch (error) {
-            setErrorMessage(error.response?.data || error.message || "Registration failed.");
+            setErrorMessage(getApiErrorMessage(error, 'Registration failed.'));
             setStatus('ERROR');
         }
     };
@@ -172,14 +172,15 @@ export default function TournamentRegistration({ currentUser }) {
                         background: #ff7a00;
                     }
                     .checkbox-label input[type="checkbox"]:checked::after {
-                        content: '✓';
+                        content: '';
                         position: absolute;
-                        color: #fff;
-                        font-size: 14px;
-                        font-weight: bold;
-                        top: 50%;
-                        left: 50%;
-                        transform: translate(-50%, -50%);
+                        top: 2px;
+                        left: 6px;
+                        width: 5px;
+                        height: 10px;
+                        border: solid #fff;
+                        border-width: 0 2px 2px 0;
+                        transform: rotate(45deg);
                     }
 
                     .btn-submit {
@@ -193,7 +194,7 @@ export default function TournamentRegistration({ currentUser }) {
                         cursor: pointer;
                         transition: all 0.3s;
                         box-shadow: 0 10px 25px rgba(255, 122, 0, 0.3);
-                        font-family: "'Inter', sans-serif";
+                        font-family: 'Inter', sans-serif;
                         text-transform: uppercase;
                         letter-spacing: 1px;
                         width: 100%;

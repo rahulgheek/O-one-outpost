@@ -1,0 +1,20 @@
+{$SANDBOX_DOMAIN} {
+	encode zstd gzip
+
+	# The only public route to the sandbox. Requests still need the
+	# X-Internal-Token header; Caddy only terminates TLS.
+	reverse_proxy code-sandbox:8085
+
+	request_body {
+		max_size 2MB
+	}
+
+	header {
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

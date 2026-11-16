@@ -12,6 +12,8 @@ import java.util.Optional;
 public interface AssessmentRepository extends MongoRepository<Assessment,String> {
     Optional<Assessment> findByTestCode(String testCode);
 
+    boolean existsByTestCode(String testCode);
+
     Page<Assessment> findByTitleContainingIgnoreCase(String title, Pageable pageable);
     Page<Assessment> findByEndTimeAfterOrderByStartTimeAsc(LocalDateTime currentTime, Pageable pageable);
     Page<Assessment> findByTitleContainingIgnoreCaseAndEndTimeAfterOrderByStartTimeAsc(String title, LocalDateTime currentTime, Pageable pageable);

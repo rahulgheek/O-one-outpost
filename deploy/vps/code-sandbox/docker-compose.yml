@@ -1,0 +1,61 @@
+name: o1-outpost-sandbox
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SANDBOX_DOMAIN: ${SANDBOX_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      code-sandbox:
+        condition: service_healthy
+    networks:
+      - sandbox_net
+
+  code-sandbox:
+    # Recommended: publish a fresh image from this repo in CI and pull it here.
+    image: ${SANDBOX_IMAGE:-rahulgheek/o-one-outpost-sandbox:latest}
+    #
+    # Alternative: build directly on the VPS from the repository. Uncomment the
+    # two lines below and remove/ignore the image line above.
+    # build:
+    #   context: ../../../code-sandbox
+    #
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      SERVER_PORT: "8085"
+    expose:
+      - "8085"
+    volumes:
+      # Docker-in-Docker via the host socket. This is root-equivalent on the
+      # host. Use a dedicated VPS and never expose this port publicly.
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "${DOCKER_GID:-999}"
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8085/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - sandbox_net
+
+networks:
+  sandbox_net:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -60,7 +60,7 @@ export default function ServerDown() {
             display: inline-flex;
             align-items: center;
             gap: 12px;
-            font-family: "'Inter', sans-serif";
+            font-family: 'Inter', sans-serif;
             text-transform: uppercase;
             letter-spacing: 1px;
           }
@@ -80,7 +80,7 @@ export default function ServerDown() {
             transition: all 0.3s;
             text-decoration: none;
             display: inline-block;
-            font-family: "'Inter', sans-serif";
+            font-family: 'Inter', sans-serif;
           }
           .btn-secondary:hover {
             background: rgba(255,255,255,0.1);

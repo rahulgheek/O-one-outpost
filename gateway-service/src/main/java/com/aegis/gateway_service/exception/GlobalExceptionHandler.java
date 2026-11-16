@@ -24,6 +24,9 @@ public class GlobalExceptionHandler {
     @Value("${ANALYTICS_SERVICE_URL:http://localhost:8082}")
     private String analyticsUrl;
 
+    @Value("${internal.secret:}")
+    private String internalSecret;
+
     private void pushAuditLog(String level, String message, Exception ex) {
         executor.submit(() -> {
             try {
@@ -37,6 +40,11 @@ public class GlobalExceptionHandler {
                 );
                 webClient.post()
                         .uri(analyticsUrl + "/api/analytics/audit")
+                        .headers(headers -> {
+                            if (internalSecret != null && !internalSecret.isBlank()) {
+                                headers.set("X-Internal-Token", internalSecret);
+                            }
+                        })
                         .bodyValue(payload)
                         .retrieve()
                         .toBodilessEntity()

@@ -37,6 +37,12 @@
 			<artifactId>spring-boot-starter-websocket</artifactId>
 		</dependency>
 
+		<!-- Health endpoint for per-host probes (exempt from the internal token) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
 		<!-- Lombok for Boilerplate Reduction -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>

@@ -5,6 +5,10 @@ target/
 *.jar
 *.war
 
+# Deployment artifacts and build logs
+deploy/artifacts/
+*-build.log
+
 # Environment variables
 .env
 .env.local

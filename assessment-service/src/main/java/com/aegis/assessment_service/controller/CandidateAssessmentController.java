@@ -1,8 +1,9 @@
 package com.aegis.assessment_service.controller;
 
+import com.aegis.assessment_service.dto.CandidateAssessmentDetails;
+import com.aegis.assessment_service.dto.CandidateAssessmentSummary;
 import com.aegis.assessment_service.dto.RegistrationRequest;
-import com.aegis.assessment_service.entitiy.Assessment;
-import com.aegis.assessment_service.entitiy.CandidateSubmission;
+import com.aegis.assessment_service.dto.SubmissionResult;
 import com.aegis.assessment_service.entitiy.CompanyProblem;
 import com.aegis.assessment_service.entitiy.LeaderboardRecord;
 import com.aegis.assessment_service.service.AssessmentExecutionService;
@@ -28,11 +29,14 @@ public class CandidateAssessmentController {
 
     @GetMapping("/{assessmentId}")
     public ResponseEntity<?> getAssessmentDetails(
-            @RequestHeader(value = "loggedInUser", required = false) String candidateId,
+            @RequestHeader("loggedInUser") String candidateId,
             @PathVariable String assessmentId) {
         try {
-            Assessment assessment = assessmentService.getAssessmentById(assessmentId);
-            return ResponseEntity.ok(assessment);
+            CandidateAssessmentDetails details =
+                    assessmentService.getAssessmentDetailsForCandidate(assessmentId, candidateId);
+            return ResponseEntity.ok(details);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
@@ -43,7 +47,8 @@ public class CandidateAssessmentController {
             @RequestHeader("loggedInUser") String candidateId,
             @PathVariable String assessmentId) {
         try {
-            List<CompanyProblem> problems = assessmentService.getSanitizedProblemsForCandidate(assessmentId, candidateId);
+            List<CompanyProblem> problems =
+                    assessmentService.getSanitizedProblemsForCandidate(assessmentId, candidateId);
             return ResponseEntity.ok(problems);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
@@ -59,24 +64,30 @@ public class CandidateAssessmentController {
             @PathVariable String problemId,
             @RequestBody Map<String, String> payload) {
 
-        String rawCode = payload.get("code");
+        String rawCode = payload == null ? null : payload.get("code");
         if (rawCode == null || rawCode.trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Code cannot be empty.");
         }
 
         try {
-            CandidateSubmission result = executionService.submitCode(assessmentId, candidateId, problemId, rawCode);
+            SubmissionResult result = executionService.submitCode(assessmentId, candidateId, problemId, rawCode);
             return ResponseEntity.ok(result);
-        } catch (RuntimeException e) {
+        } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
     @GetMapping("/{assessmentId}/leaderboard")
     public ResponseEntity<?> getFinalLeaderboard(
+            @RequestHeader("loggedInUser") String candidateId,
             @PathVariable String assessmentId) {
         try {
-            List<LeaderboardRecord> leaderboard = assessmentService.getLeaderboardIfAvailable(assessmentId);
+            List<LeaderboardRecord> leaderboard =
+                    assessmentService.getLeaderboardIfAvailable(assessmentId, candidateId);
             return ResponseEntity.ok(leaderboard);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
@@ -86,13 +97,12 @@ public class CandidateAssessmentController {
     }
 
     @GetMapping("/directory")
-    public ResponseEntity<Page<Assessment>> browseAssessments(
+    public ResponseEntity<Page<CandidateAssessmentSummary>> browseAssessments(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "9") int size,
             @RequestParam(defaultValue = "") String search) {
 
-        Page<Assessment> assessments = assessmentService.getAvailableAssessments(search, page, size);
-        return ResponseEntity.ok(assessments);
+        return ResponseEntity.ok(assessmentService.getAvailableAssessments(search, page, size));
     }
 
     @PostMapping("/{assessmentId}/register")
@@ -110,11 +120,10 @@ public class CandidateAssessmentController {
     }
 
     @GetMapping("/my-tournaments")
-    public ResponseEntity<List<Assessment>> getMyUpcomingTournaments(
+    public ResponseEntity<List<CandidateAssessmentDetails>> getMyUpcomingTournaments(
             @RequestHeader("loggedInUser") String candidateId) {
 
-        List<Assessment> activeTournaments = registrationService.getCandidateActiveTournaments(candidateId);
-        return ResponseEntity.ok(activeTournaments);
+        return ResponseEntity.ok(assessmentService.getCandidateTournaments(candidateId));
     }
 
     @PostMapping("/{assessmentId}/start")
@@ -124,19 +133,27 @@ public class CandidateAssessmentController {
         try {
             registrationService.startWorkspaceTimer(assessmentId, candidateId);
             return ResponseEntity.ok("Workspace initialized. Clock is ticking!");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
-    // 🚨 NEW ENDPOINT: Permanently locks the test
     @PostMapping("/{assessmentId}/finish")
     public ResponseEntity<String> finishAssessment(
             @RequestHeader("loggedInUser") String candidateId,
             @PathVariable String assessmentId,
             @RequestParam String reason) {
-
-        registrationService.lockAssessment(assessmentId, candidateId, reason);
-        return ResponseEntity.ok("Assessment locked with status: " + reason);
+        try {
+            registrationService.lockAssessment(assessmentId, candidateId, reason);
+            return ResponseEntity.ok("Assessment locked with status: " + reason);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

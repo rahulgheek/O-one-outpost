@@ -18,6 +18,8 @@ import java.io.IOException;
 @Order(1)
 public class InternalAuthFilter implements Filter {
 
+    private static final String HEALTH_PATH = "/actuator/health";
+
     @Value("${internal.secret:}")
     private String expectedSecret;
 
@@ -31,6 +33,14 @@ public class InternalAuthFilter implements Filter {
         }
 
         HttpServletRequest httpReq = (HttpServletRequest) request;
+
+        // Load-balancer / platform probes cannot carry the internal token.
+        // Exempt only the health endpoint, never the wider actuator surface.
+        if (isHealthProbe(httpReq)) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         String token = httpReq.getHeader("X-Internal-Token");
 
         if (expectedSecret.equals(token)) {
@@ -41,5 +51,10 @@ public class InternalAuthFilter implements Filter {
             httpResp.setContentType("application/json");
             httpResp.getWriter().write("{\"message\":\"Direct access forbidden. Use the gateway.\"}");
         }
+    }
+
+    private boolean isHealthProbe(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return HEALTH_PATH.equals(path) || path.startsWith(HEALTH_PATH + "/");
     }
 }

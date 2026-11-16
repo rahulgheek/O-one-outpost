@@ -1,8 +1,8 @@
-name: Build & Deploy
+name: Build & Deploy (legacy AWS EC2)
 
+# Legacy single-host Docker/AWS flow. The production topology now uses Botkeep
+# plus a sandbox VPS (see deploy/README.md). Kept for manual fallback only.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 env:

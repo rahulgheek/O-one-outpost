@@ -22,7 +22,6 @@ const NAV_ITEMS = [
 export default function AdminDashboard({ getToken }) {
   const [mode, setMode] = useState('create');
   const [availableProblems, setAvailableProblems] = useState([]);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [status, setStatus] = useState('');
   const [analytics, setAnalytics] = useState(null);
   const [systemLogs, setSystemLogs] = useState([]);
@@ -103,7 +102,9 @@ export default function AdminDashboard({ getToken }) {
                   prevHealthRef.current = data.health;
                 }
                 setAnalytics(data);
-              } catch (e) {}
+              } catch {
+                // Telemetry is best-effort; the next poll retries.
+              }
             }
           }
         }
@@ -161,7 +162,7 @@ export default function AdminDashboard({ getToken }) {
 
   const handleEditProblem = (p) => {
     setProblem({ ...p, parameterTypes: p.parameterTypes || [], testCases: p.testCases?.length > 0 ? p.testCases : defaultProblemState.testCases });
-    setMode('update'); setIsDataLoaded(true); setActiveTab('inject');
+    setMode('update'); setActiveTab('inject');
     setStatus(`Loaded: '${p.title}' — ready to edit`);
   };
 
@@ -207,7 +208,6 @@ export default function AdminDashboard({ getToken }) {
   const handleTitleChange = (e) => {
     const newTitle = e.target.value;
     setProblem({ ...problem, title: newTitle });
-    setIsDataLoaded(false);
     if (mode === 'create') return;
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(async () => {
@@ -218,13 +218,13 @@ export default function AdminDashboard({ getToken }) {
         const exactMatch = res.data.find(p => p.title === newTitle);
         if (exactMatch) {
           setProblem({ ...exactMatch, parameterTypes: exactMatch.parameterTypes || [], testCases: exactMatch.testCases?.length > 0 ? exactMatch.testCases : defaultProblemState.testCases });
-          setIsDataLoaded(true); setStatus(`Loaded: '${exactMatch.title}'`);
+          setStatus(`Loaded: '${exactMatch.title}'`);
         }
       } catch (err) { setStatus(`SEARCH ERROR: ${err.message}`); }
     }, 300);
   };
 
-  const handleModeSwitch = (newMode) => { setMode(newMode); setProblem(defaultProblemState); setIsDataLoaded(false); setStatus(''); setAvailableProblems([]); };
+  const handleModeSwitch = (newMode) => { setMode(newMode); setProblem(defaultProblemState); setStatus(''); setAvailableProblems([]); };
   const handleAddTestCase = () => setProblem({ ...problem, testCases: [...problem.testCases, { inputs: [''], expectedOutput: '', hidden: false }] });
   const handleTestCaseChange = (index, field, value) => {
     const tc = [...problem.testCases];
@@ -727,7 +727,7 @@ export default function AdminDashboard({ getToken }) {
                           })}
                         </div>
                       ) : (
-                        <p style={{ color: '#333', fontFamily: "'Share Tech Mono', monospace", fontSize: '0.85rem', padding: '20px 0' }}>Awaiting telemetry stream...</p>
+                        <p style={{ color: '#71717a', fontFamily: "'Share Tech Mono', monospace", fontSize: '0.85rem', padding: '20px 0' }}>Awaiting telemetry stream...</p>
                       )}
                     </div>
                   </div>
@@ -887,7 +887,7 @@ export default function AdminDashboard({ getToken }) {
                   </div>
                   <div className="gp-body">
                     {problemLibrary.length === 0 ? (
-                      <p style={{ color: '#333', textAlign: 'center', padding: '40px 0', fontFamily: "'Share Tech Mono', monospace" }}>No problems found. Inject your first problem!</p>
+                      <p style={{ color: '#71717a', textAlign: 'center', padding: '40px 0', fontFamily: "'Share Tech Mono', monospace" }}>No problems found. Inject your first problem!</p>
                     ) : (
                       <div style={{ overflowX: 'auto' }}>
                         <table className="prob-table">
@@ -955,7 +955,7 @@ export default function AdminDashboard({ getToken }) {
                   </div>
                   <div className="gp-body">
                     {dailySchedules.length === 0 ? (
-                      <p style={{ color: '#333', textAlign: 'center', padding: '30px 0', fontFamily: "'Share Tech Mono', monospace", fontSize: '0.85rem' }}>No challenges scheduled.</p>
+                      <p style={{ color: '#71717a', textAlign: 'center', padding: '30px 0', fontFamily: "'Share Tech Mono', monospace", fontSize: '0.85rem' }}>No challenges scheduled.</p>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {dailySchedules.map(d => (

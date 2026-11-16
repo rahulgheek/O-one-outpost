@@ -1,3 +1,18 @@
+server:
+  port: 8083
+  shutdown: graceful
+
+# Per-host probes hit /actuator/health without the internal token.
+# Expose only health; never expose the wider actuator surface.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
 spring:
   main:
     lazy-initialization: true
@@ -6,16 +21,18 @@ spring:
   config:
     import: optional:file:./assessment-service/.env[.properties], optional:file:.env[.properties]
   jackson:
-    time-zone: Asia/Kolkata
+    time-zone: ${APP_TIMEZONE:Asia/Kolkata}
   data:
     mongodb:
       uri: ${ASSESSMENT_MONGO_URI}
-
-server:
-  port: 8083
 
 sandbox:
   url: ${SANDBOX_URL:http://localhost:8085/api/sandbox/execute}
 
 internal:
   secret: ${INTERNAL_SECRET:}
+
+logging:
+  level:
+    com.aegis.assessment_service: ${LOG_LEVEL_ASSESSMENT:INFO}
+    org.springframework.web: ${LOG_LEVEL_WEB:INFO}

@@ -904,7 +904,7 @@ export default function Arena({ currentUser, getToken }) {
 
               <div className="arena-terminal-body">
                 {logs.length === 0 && (
-                  <div style={{ color: '#333', fontStyle: 'italic' }}>Awaiting system events...</div>
+                  <div style={{ color: '#71717a', fontStyle: 'italic' }}>Awaiting system events...</div>
                 )}
                 {logs.map((log, i) => (
                   <div key={i} className="arena-log-entry">

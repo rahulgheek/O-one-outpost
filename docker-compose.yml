@@ -1,3 +1,11 @@
+# =============================================================================
+# LOCAL DEVELOPMENT ONLY - starts every service on one host.
+# This is not the production deployment path and must not be used for it.
+#
+# Production deploys each service independently (its own host, its own JAR or
+# image, its own env block). See deploy/README.md and each service's
+# .env.example / Dockerfile.
+# =============================================================================
 version: '3.8'
 
 services:

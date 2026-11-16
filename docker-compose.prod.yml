@@ -1,8 +1,21 @@
+# =============================================================================
+# LEGACY SINGLE-HOST DEPLOYMENT (manual fallback only).
+#
+# This starts all six services on one Docker host and is intentionally NOT the
+# production path. Production deploys each service independently to its own
+# server, so no service shares a Docker network, Redis container, or host.
+#
+# Independent path:
+#   - one JAR per service from deploy/artifacts/<service>/app.jar
+#   - one env block per service from <service>/.env.example
+#   - public HTTPS URLs between services (never http://<service-name>:<port>)
+#   - code-sandbox alone on its Docker VPS (deploy/vps/code-sandbox)
+# =============================================================================
 services:
   gateway-service:
-    image: rahulgheek/ooo-gateway-service:${IMAGE_TAG:-latest}
+    image: rahulgheek/o-one-outpost-gateway:${IMAGE_TAG:-latest}
     ports:
-      - "80:8080"
+      - "8080:8080"
     expose:
       - "8080"
     networks:
@@ -39,7 +52,7 @@ services:
         max-file: "3"
 
   auth-service:
-    image: rahulgheek/ooo-auth-service:${IMAGE_TAG:-latest}
+    image: rahulgheek/o-one-outpost-auth:${IMAGE_TAG:-latest}
     expose:
       - "8081"
     networks:
@@ -49,7 +62,7 @@ services:
     env_file:
       - .env.prod
     healthcheck:
-      test: ["CMD", "curl", "-s", "http://localhost:8081/", "-o", "/dev/null"]
+      test: ["CMD", "curl", "-sf", "http://localhost:8081/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -61,7 +74,7 @@ services:
         max-file: "3"
 
   arena-service:
-    image: rahulgheek/ooo-arena-service:${IMAGE_TAG:-latest}
+    image: rahulgheek/o-one-outpost-arena:${IMAGE_TAG:-latest}
     expose:
       - "8084"
     networks:
@@ -76,7 +89,7 @@ services:
       code-sandbox:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-s", "http://localhost:8084/", "-o", "/dev/null"]
+      test: ["CMD", "curl", "-sf", "http://localhost:8084/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -88,7 +101,7 @@ services:
         max-file: "3"
 
   assessment-service:
-    image: rahulgheek/ooo-assessment-service:${IMAGE_TAG:-latest}
+    image: rahulgheek/o-one-outpost-assessment:${IMAGE_TAG:-latest}
     expose:
       - "8083"
     networks:
@@ -103,7 +116,7 @@ services:
       code-sandbox:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-s", "http://localhost:8083/", "-o", "/dev/null"]
+      test: ["CMD", "curl", "-sf", "http://localhost:8083/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -115,7 +128,7 @@ services:
         max-file: "3"
 
   analytics-service:
-    image: rahulgheek/ooo-analytics-service:${IMAGE_TAG:-latest}
+    image: rahulgheek/o-one-outpost-analytics:${IMAGE_TAG:-latest}
     expose:
       - "8082"
     networks:
@@ -131,7 +144,7 @@ services:
       - SANDBOX_URL=http://code-sandbox:8085
       - GATEWAY_URL=http://gateway-service:8080
     healthcheck:
-      test: ["CMD", "curl", "-s", "http://localhost:8082/", "-o", "/dev/null"]
+      test: ["CMD", "curl", "-sf", "http://localhost:8082/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -143,7 +156,7 @@ services:
         max-file: "3"
 
   code-sandbox:
-    image: rahulgheek/ooo-code-sandbox:${IMAGE_TAG:-latest}
+    image: rahulgheek/o-one-outpost-sandbox:${IMAGE_TAG:-latest}
     expose:
       - "8085"
     networks:
@@ -157,7 +170,7 @@ services:
     group_add:
       - "${DOCKER_GID:-999}"
     healthcheck:
-      test: ["CMD", "curl", "-s", "http://localhost:8085/", "-o", "/dev/null"]
+      test: ["CMD", "curl", "-sf", "http://localhost:8085/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 5

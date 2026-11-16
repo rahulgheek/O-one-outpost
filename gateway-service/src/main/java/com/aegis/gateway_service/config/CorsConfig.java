@@ -1,5 +1,6 @@
 package com.aegis.gateway_service.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -12,25 +13,26 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
+    /**
+     * Comma-separated list of allowed origin patterns.
+     * Example: https://app.example.com,https://*.vercel.app,http://localhost:*
+     */
+    @Value("${cors.allowed-origins:https://*.vercel.app,http://localhost:*}")
+    private String allowedOrigins;
+
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
 
-        // Allow the production Vercel frontend and localhost for dev
-        corsConfig.setAllowedOriginPatterns(Arrays.asList(
-                "https://ooneoutpost-five.vercel.app",
-                "https://*.vercel.app",
-                "http://localhost:*"
-        ));
-
+        corsConfig.setAllowedOriginPatterns(parseOrigins());
 
         // Allow all standard HTTP methods + OPTIONS for the preflight
         corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
 
-        // Allow all headers (including Authorization for your JWTs)
+        // Allow all headers (including Authorization for JWTs)
         corsConfig.setAllowedHeaders(List.of("*"));
 
-        // Allow credentials (important if you ever use cookies or secure sessions)
+        // Allow credentials (important if cookies or secure sessions are used)
         corsConfig.setAllowCredentials(true);
 
         // Cache the preflight response for 1 hour to reduce Gateway load
@@ -41,5 +43,12 @@ public class CorsConfig {
         source.registerCorsConfiguration("/**", corsConfig);
 
         return new CorsWebFilter(source);
+    }
+
+    private List<String> parseOrigins() {
+        return Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
     }
 }

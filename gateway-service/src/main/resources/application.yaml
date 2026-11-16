@@ -1,5 +1,9 @@
 server:
   port: 8080
+  # Botkeep/Caddy terminate TLS and forward requests. This makes the gateway honour
+  # X-Forwarded-* headers so client IPs and redirects are correct.
+  forward-headers-strategy: framework
+  shutdown: graceful
 
 spring:
   main:
@@ -11,10 +15,11 @@ spring:
   data:
     redis:
       host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      password: ${REDIS_PASSWORD}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      # Upstash requires TLS. Set REDIS_SSL=false for a plain Redis instance.
       ssl:
-        enabled: true
+        enabled: ${REDIS_SSL:true}
 
   cloud:
     gateway:
@@ -25,13 +30,13 @@ spring:
             response-timeout: 10s
 
           routes:
-            # ── Auth Service (no auth filter — these are public endpoints) ──
+            # ── Auth Service (public endpoints — no JWT filter) ──
             - id: auth-service
               uri: ${AUTH_SERVICE_URL}
               predicates:
                 - Path=/api/auth/**
 
-            # ── Daily Question (PUBLIC — no auth, time-lock enforced server-side) ──
+            # ── Daily Question (PUBLIC — time-lock enforced server-side) ──
             - id: daily-question-public
               uri: ${ARENA_SERVICE_URL}
               predicates:
@@ -41,7 +46,7 @@ spring:
             - id: arena-service
               uri: ${ARENA_SERVICE_URL}
               predicates:
-                - Path=/api/match/**, /api/problems/**, /api/profiles/**, /api/arena/**
+                - Path=/api/match/**,/api/problems/**,/api/profiles/**,/api/arena/**
               filters:
                 - IpBlockingFilter
                 - AuthenticationFilter
@@ -51,7 +56,7 @@ spring:
                     redis-rate-limiter.burstCapacity: 20
                     key-resolver: "#{@userKeyResolver}"
 
-            # ── Arena WebSocket (no JWT filter — browsers can't send Bearer on WS) ──
+            # ── Arena WebSocket (browsers connect through the gateway) ──
             - id: arena-websocket
               uri: ${ARENA_WS_URL}
               predicates:
@@ -75,7 +80,7 @@ spring:
             - id: assessment-service
               uri: ${ASSESSMENT_SERVICE_URL}
               predicates:
-                - Path=/api/candidate/**, /api/assessment/**
+                - Path=/api/candidate/**,/api/assessment/**
               filters:
                 - IpBlockingFilter
                 - AuthenticationFilter
@@ -91,8 +96,13 @@ jwt:
 internal:
   secret: ${INTERNAL_SECRET:}
 
+# Comma-separated origins. The gateway is the only public entry point, so this is
+# where the frontend origin(s) must be allow-listed.
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://*.vercel.app,http://localhost:*}
+
 logging:
   level:
-    org.springframework.web: DEBUG
-    com.aegis.gateway_service: DEBUG
+    org.springframework.web: ${LOG_LEVEL_WEB:INFO}
+    com.aegis.gateway_service: ${LOG_LEVEL_GATEWAY:INFO}
     reactor.netty.http.server.HttpServerOperations: ERROR

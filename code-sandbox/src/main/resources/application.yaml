@@ -1,5 +1,17 @@
 server:
   port: 8085 # 8080 is Gateway, 8084 is Arena, 8085 is Sandbox
+  shutdown: graceful
+
+# Per-host probes hit /actuator/health without the internal token.
+# Expose only health; never expose the wider actuator surface.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
 
 spring:
   application:
@@ -9,3 +21,7 @@ spring:
 
 internal:
   secret: ${INTERNAL_SECRET:}
+
+logging:
+  level:
+    com.aegis.code_sandbox: ${LOG_LEVEL_SANDBOX:INFO}

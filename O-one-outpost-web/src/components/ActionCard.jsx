@@ -25,7 +25,8 @@ export default function ActionCard({
         
         {isLocked && (
           <div className="lock-overlay">
-            <span>🔒 Coming Soon</span>
+            <i className="bi bi-lock-fill" aria-hidden="true" />
+            <span>Coming Soon</span>
           </div>
         )}
       </div>

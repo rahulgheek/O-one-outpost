@@ -17,10 +17,10 @@ export default function EngineerNav({ currentUser: propUser }) {
   };
 
   const links = [
-    { label: 'Lobby', path: '/lobby' },
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Tournaments', path: '/candidate/directory' },
-    { label: 'My Progress', path: '/candidate/dashboard' },
+    { label: 'Lobby', path: '/lobby', icon: 'bi-grid-1x2' },
+    { label: 'Dashboard', path: '/dashboard', icon: 'bi-speedometer2' },
+    { label: 'Tournaments', path: '/candidate/directory', icon: 'bi-trophy' },
+    { label: 'My Progress', path: '/candidate/dashboard', icon: 'bi-graph-up-arrow' },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -92,6 +92,7 @@ export default function EngineerNav({ currentUser: propUser }) {
                 className={`engineer-nav-link ${isActive(link.path) ? 'active' : ''}`}
                 onClick={() => navigate(link.path)}
               >
+                <i className={`bi ${link.icon}`} aria-hidden="true" style={{ marginRight: '7px' }} />
                 {link.label}
               </button>
             ))}

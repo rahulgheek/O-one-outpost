@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import CompanyNav from './CompanyNav';
+import { getApiErrorMessage } from '../utils/errors';
 
 export default function QuestionBank() {
     const getToken = () => localStorage.getItem('algo_arena_token');
@@ -47,7 +48,7 @@ export default function QuestionBank() {
             setStatus('SUCCESS: Private problem locked into your company vault!');
             setProblem(defaultProblemState);
         } catch (err) {
-            setStatus(`ERROR: ${err.response?.data || err.message}`);
+            setStatus(`ERROR: ${getApiErrorMessage(err, 'Could not save the problem.')}`);
         } finally {
             setIsLoading(false);
         }
@@ -64,8 +65,8 @@ export default function QuestionBank() {
                 
                 {/* HEADER */}
                 <div style={{ marginBottom: '40px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '12px', background: 'rgba(255,122,0,0.1)', border: '1px solid rgba(255,122,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
-                        🔒
+                    <div style={{ width: '60px', height: '60px', borderRadius: '12px', background: 'rgba(255,122,0,0.1)', border: '1px solid rgba(255,122,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.7rem', color: '#ff7a00' }}>
+                        <i className="bi bi-shield-lock" aria-hidden="true" />
                     </div>
                     <div>
                         <div style={{ color: '#ff7a00', fontSize: '0.75rem', letterSpacing: '4px', marginBottom: '8px', fontWeight: 'bold' }}>RECRUITER COMMAND CENTER</div>

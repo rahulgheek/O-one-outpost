@@ -1,10 +1,22 @@
 server:
   port: 8082
+  shutdown: graceful
+
+# Per-host probes hit /actuator/health without the internal token.
+# Expose only health; never expose the wider actuator surface.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
 
 logging:
   level:
-    org.springframework.web: DEBUG
-    com.aegis.analytics_service: DEBUG
+    org.springframework.web: ${LOG_LEVEL_WEB:INFO}
+    com.aegis.analytics_service: ${LOG_LEVEL_ANALYTICS:INFO}
 
 spring:
   main:

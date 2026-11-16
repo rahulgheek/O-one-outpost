@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import CompanyNav from './CompanyNav';
+import { getApiErrorMessage } from '../utils/errors';
 
 const API = `${import.meta.env.VITE_API_GATEWAY_URL}/api/assessment`;
 const getToken = () => localStorage.getItem('algo_arena_token');
@@ -24,9 +25,17 @@ export default function AssessmentBuilder() {
     const [testCode, setTestCode]   = useState(null);
 
     const localNowForPicker = () => {
-        const now = new Date();
-        const offset = now.getTimezoneOffset() * 60000;
-        return new Date(now - offset).toISOString().slice(0, 16);
+        // The input is IST wall-clock time, so the minimum must be IST "now",
+        // not the recruiter's browser timezone.
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Kolkata',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false,
+        }).formatToParts(new Date()).reduce((acc, part) => {
+            acc[part.type] = part.value;
+            return acc;
+        }, {});
+        return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
     };
 
     useEffect(() => {
@@ -48,6 +57,16 @@ export default function AssessmentBuilder() {
 
         if (selectedProblemIds.length === 0) {
             setError('Select at least one problem before generating.');
+            return;
+        }
+
+        if (!startTime) {
+            setError('Choose a start time for the assessment.');
+            return;
+        }
+
+        if (new Date(`${startTime}:00+05:30`).getTime() <= Date.now()) {
+            setError('Start time must be in the future so candidates can register.');
             return;
         }
 
@@ -83,7 +102,7 @@ export default function AssessmentBuilder() {
             setTitle(''); setTargetRole(''); setDepartment('');
             setDuration(90); setStartTime(''); setSelectedProblemIds([]);
         } catch (err) {
-            setError(err.response?.data || err.message);
+            setError(getApiErrorMessage(err, 'Unable to generate the assessment.'));
         } finally {
             setIsLoading(false);
         }
@@ -91,7 +110,7 @@ export default function AssessmentBuilder() {
 
     const endPreview = (() => {
         if (!startTime) return null;
-        const [date, time] = startTime.split('T');
+        const [, time] = startTime.split('T');
         const [h, m] = time.split(':').map(Number);
         const total = h * 60 + m + parseInt(duration || 0);
         const eH = Math.floor(total / 60) % 24;
@@ -110,7 +129,6 @@ export default function AssessmentBuilder() {
     })();
 
     const inputStyle = { padding: '14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', outline: 'none', fontFamily: "'Inter', sans-serif", borderRadius: '12px', transition: 'all 0.3s', width: '100%', fontSize: '0.95rem' };
-    const labelStyle = { display: 'block', color: '#888', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '2px', textTransform: 'uppercase' };
 
     return (
         <div style={{ minHeight: '100vh', background: '#0a0503', color: '#fff', fontFamily: "'Inter', sans-serif" }}>
@@ -121,8 +139,8 @@ export default function AssessmentBuilder() {
                 {/* ── HEADER ─────────────────────────────────────── */}
                 <div style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-glass)', paddingBottom: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <div style={{ width: '60px', height: '60px', borderRadius: '12px', background: 'var(--accent-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', boxShadow: '0 0 20px rgba(139,92,246,0.3)' }}>
-                            📋
+                        <div style={{ width: '60px', height: '60px', borderRadius: '12px', background: 'var(--accent-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', color: '#fff', boxShadow: '0 0 20px rgba(139,92,246,0.3)' }}>
+                            <i className="bi bi-clipboard-data" aria-hidden="true" />
                         </div>
                         <div>
                             <div style={{
@@ -414,13 +432,3 @@ function Field({ label, children }) {
         </div>
     );
 }
-
-const inputStyle = {
-    width: '100%', padding: '14px 16px',
-    background: 'var(--bg-tertiary)',
-    border: '1px solid var(--border-glass-strong)',
-    borderRadius: '6px', color: 'var(--text-primary)',
-    fontSize: '0.9rem', outline: 'none',
-    boxSizing: 'border-box',
-    transition: 'all 0.3s',
-};

@@ -1,33 +1,58 @@
 :root {
-  /* Layout Colors */
-  --sidebar-bg: #1e1e2d;
+  color-scheme: dark;
+
+  /* ── Core surfaces ─────────────────────────────────────────── */
+  --main-bg: #0a0503;
+  --bg-primary: #0a0503;
+  --bg-secondary: #120a06;
+  --bg-tertiary: rgba(255, 255, 255, 0.04);
+  --card-bg: rgba(15, 8, 3, 0.6);
+
+  /* ── Typography ───────────────────────────────────────────── */
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+
+  /* ── Brand accents ────────────────────────────────────────── */
+  --accent-orange: #ff7a00;
+  --accent-orange-strong: #ff3d00;
+  --accent-cyan: #00ffb4;
+  --accent-cyan-dim: rgba(0, 255, 180, 0.1);
+  --accent-purple: #8b5cf6;
+  --accent-purple-dim: rgba(139, 92, 246, 0.1);
+  --accent-yellow: #eab308;
+  --accent-red: #ef4444;
+  --accent-green: #27c93f;
+
+  /* ── Glass surfaces ───────────────────────────────────────── */
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --border-glass-strong: rgba(255, 255, 255, 0.14);
+  --glow-orange: 0 0 24px rgba(255, 122, 0, 0.25);
+  --glow-cyan: 0 0 20px rgba(0, 255, 180, 0.25);
+  --glow-purple: 0 0 20px rgba(139, 92, 246, 0.3);
+
+  /* ── Fonts ────────────────────────────────────────────────── */
+  --font-heading: 'Outfit', sans-serif;
+  --font-ui: 'Inter', sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+
+  /* ── Shadows ──────────────────────────────────────────────── */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 4px 18px rgba(255, 122, 0, 0.35);
+
+  /* ── Legacy sidebar/header tokens (kept for App.css) ─────── */
+  --sidebar-bg: #120a06;
   --sidebar-text: #a1a1aa;
   --sidebar-text-hover: #ffffff;
-  --sidebar-active-bg: rgba(255, 255, 255, 0.05);
-
-  --header-bg: linear-gradient(135deg, #4481eb 0%, #04befe 100%);
+  --sidebar-active-bg: rgba(255, 122, 0, 0.08);
+  --header-bg: linear-gradient(135deg, #ff7a00 0%, #ff3d00 100%);
   --header-text: #ffffff;
-
-  --main-bg: #f4f7fa;
-  --card-bg: #ffffff;
-  --text-primary: #333333;
-  --text-secondary: #888888;
-  
-  /* Gradients for Cards */
   --grad-pink: linear-gradient(135deg, #ff6a88 0%, #ff99ac 100%);
   --grad-blue: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   --grad-green: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
   --grad-orange: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-  
-  /* Fonts */
-  --font-heading: 'Outfit', sans-serif;
-  --font-ui: 'Inter', sans-serif;
-  
-  /* Shadows */
-  --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 20px 0 rgba(0,0,0,0.05);
-  --shadow-lg: 0 10px 30px 0 rgba(0,0,0,0.1);
-  --shadow-glow: 0 4px 15px rgba(68, 129, 235, 0.4);
 }
 
 * {
@@ -42,13 +67,15 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-  background-image: none; /* Resetting from old theme */
+  background-image: none;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 700;
-  color: #111;
+  /* Inherit so dark pages stay readable instead of forcing a near-black
+     heading color on a near-black background. */
+  color: inherit;
 }
 
 button {
@@ -58,9 +85,40 @@ button {
   outline: none;
 }
 
-/* Base Card */
+/* ── Shared glass surface (used by builder, question bank, profile) ── */
+.glass-panel {
+  background: linear-gradient(135deg, rgba(20, 10, 5, 0.78), rgba(0, 0, 0, 0.88));
+  border: 1px solid rgba(255, 122, 0, 0.15);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── Shared animations ─────────────────────────────────────── */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.45s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out both;
+}
+
+/* ── Base card ─────────────────────────────────────────────── */
 .card {
   background: var(--card-bg);
+  border: 1px solid var(--border-glass);
   border-radius: 12px;
   box-shadow: var(--shadow-md);
   padding: 20px;
@@ -72,7 +130,7 @@ button {
   box-shadow: var(--shadow-lg);
 }
 
-/* Gradient Stats Cards */
+/* ── Gradient stat cards ───────────────────────────────────── */
 .stat-card {
   border-radius: 12px;
   padding: 24px;
@@ -101,7 +159,7 @@ button {
   margin-bottom: 0;
 }
 
-/* Buttons */
+/* ── Buttons ───────────────────────────────────────────────── */
 .btn {
   padding: 10px 20px;
   border-radius: 8px;
@@ -121,22 +179,22 @@ button {
 }
 
 .btn-primary:hover {
-  box-shadow: 0 6px 20px rgba(68, 129, 235, 0.6);
+  box-shadow: 0 6px 20px rgba(255, 122, 0, 0.5);
   transform: translateY(-1px);
 }
 
 .btn-outline {
   background: transparent;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-glass-strong);
   color: var(--text-primary);
 }
 
 .btn-outline:hover {
-  background: #f8f9fa;
-  border-color: #ccc;
+  background: var(--bg-tertiary);
+  border-color: var(--accent-orange);
 }
 
-/* Tables */
+/* ── Tables ────────────────────────────────────────────────── */
 .table-container {
   overflow-x: auto;
 }
@@ -154,22 +212,22 @@ button {
   font-size: 0.85rem;
   text-transform: uppercase;
   font-weight: 600;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-glass);
 }
 
 .premium-table td {
   padding: 16px;
   font-size: 0.95rem;
   color: var(--text-primary);
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   transition: background 0.2s ease;
 }
 
 .premium-table tbody tr:hover td {
-  background: #fafbfe;
+  background: rgba(255, 122, 0, 0.04);
 }
 
-/* Badges */
+/* ── Badges ────────────────────────────────────────────────── */
 .badge {
   padding: 4px 12px;
   border-radius: 20px;
@@ -177,17 +235,17 @@ button {
   font-weight: 600;
 }
 
-.badge-success { background: rgba(67, 233, 123, 0.1); color: #28c76f; }
-.badge-warning { background: rgba(254, 225, 64, 0.1); color: #ff9f43; }
-.badge-danger { background: rgba(255, 106, 136, 0.1); color: #ea5455; }
+.badge-success { background: rgba(39, 201, 63, 0.1); color: #4ade80; }
+.badge-warning { background: rgba(234, 179, 8, 0.1); color: #facc15; }
+.badge-danger { background: rgba(239, 68, 68, 0.1); color: #f87171; }
 
-/* Scrollbar */
+/* ── Scrollbar ─────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #ccc; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 122, 0, 0.4); }
 
-/* Micro-animations */
+/* ── Micro-animations ──────────────────────────────────────── */
 @keyframes slide-in-bottom {
   0% { transform: translateY(20px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }

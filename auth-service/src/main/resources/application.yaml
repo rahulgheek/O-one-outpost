@@ -1,5 +1,17 @@
 server:
   port: 8081
+  shutdown: graceful
+
+# Per-host probes hit /actuator/health without the internal token.
+# Expose only health; never expose the wider actuator surface.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
 
 spring:
   main:
@@ -18,25 +30,26 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
-        format_sql: true
+        format_sql: ${JPA_FORMAT_SQL:false}
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  # Redis Configuration (External Upstash Redis with TLS)
+  # Redis Configuration (Upstash Redis with TLS by default)
   data:
     redis:
       host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      password: ${REDIS_PASSWORD}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      # Upstash requires TLS. Set REDIS_SSL=false for a plain Redis instance.
       ssl:
-        enabled: true
+        enabled: ${REDIS_SSL:true}
 
   # Email Configuration (Brevo SMTP Relay)
   mail:
     host: ${MAIL_HOST}
-    port: ${MAIL_PORT}
+    port: ${MAIL_PORT:2525}
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
     properties:
@@ -49,13 +62,13 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET}
-  expiration: 86400000
+  expiration: ${JWT_EXPIRATION:86400000}
 
 internal:
   secret: ${INTERNAL_SECRET:}
 
 logging:
   level:
-    com.aegis.auth_service: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.web: DEBUG
+    com.aegis.auth_service: ${LOG_LEVEL_AUTH:INFO}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:INFO}
+    org.springframework.web: ${LOG_LEVEL_WEB:INFO}
