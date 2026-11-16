@@ -3,6 +3,8 @@ package com.aegis.assessment_service.exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -24,6 +26,9 @@ public class GlobalExceptionHandler {
     @Value("${ANALYTICS_SERVICE_URL:http://localhost:8082}")
     private String analyticsUrl;
 
+    @Value("${internal.secret:}")
+    private String internalSecret;
+
     private void pushAuditLog(String level, String message, Exception ex) {
         executor.submit(() -> {
             try {
@@ -35,7 +40,14 @@ public class GlobalExceptionHandler {
                         "stackTrace", stackTrace != null ? stackTrace : "",
                         "timestamp", Instant.now().toString()
                 );
-                restTemplate.postForEntity(analyticsUrl + "/api/analytics/audit", payload, Void.class);
+                HttpHeaders headers = new HttpHeaders();
+                if (internalSecret != null && !internalSecret.isBlank()) {
+                    headers.set("X-Internal-Token", internalSecret);
+                }
+                restTemplate.postForEntity(
+                        analyticsUrl + "/api/analytics/audit",
+                        new HttpEntity<>(payload, headers),
+                        Void.class);
             } catch (Exception ignored) {}
         });
     }
