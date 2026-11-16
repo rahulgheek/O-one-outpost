@@ -72,9 +72,22 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     return response.setComplete();
                 }
 
-                // FIX: Actually use the isExecutionZone boolean here!
-                boolean isExecutionZone = path.startsWith("/api/match") ||
-                        (path.startsWith("/api/candidate/workspace") && !path.contains("/directory"));
+                // All candidate routes belong to players. This includes
+                // /api/candidate/join and the workspace endpoints. Only the
+                // directory was previously exempted, which let COMPANY/ADMIN
+                // tokens reach candidate flows.
+                boolean isCandidateZone = path.equals("/api/candidate")
+                        || path.startsWith("/api/candidate/");
+
+                if (isCandidateZone && !"USER".equals(userRole)) {
+                    System.out.println("[🛡️ AEGIS-RBAC] Blocked: Role " + userRole + " attempted to access a candidate route.");
+                    ServerHttpResponse response = exchange.getResponse();
+                    response.setStatusCode(HttpStatus.FORBIDDEN);
+                    return response.setComplete();
+                }
+
+                // Competitive matches are execution zones too.
+                boolean isExecutionZone = path.startsWith("/api/match");
 
                 if (isExecutionZone && !"USER".equals(userRole)) {
                     System.out.println("[🛡️ AEGIS-RBAC] Blocked: Role " + userRole + " attempted to enter a player execution zone.");

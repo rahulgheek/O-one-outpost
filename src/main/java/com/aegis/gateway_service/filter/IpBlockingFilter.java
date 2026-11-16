@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -28,9 +29,9 @@ public class IpBlockingFilter extends AbstractGatewayFilterFactory<IpBlockingFil
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
 
-            // Extract the IP Address safely
-            String ip = exchange.getRequest().getRemoteAddress() != null ?
-                    exchange.getRequest().getRemoteAddress().getAddress().getHostAddress() : "UNKNOWN";
+            // Resolve the real client IP. Behind Botkeep/Caddy the TCP peer is the
+            // edge proxy, so use the forwarded headers when present.
+            String ip = resolveClientIp(exchange);
 
             String jailKey = "aegis:jail:ip:" + ip;
             String countKey = "aegis:count:ip:" + ip;
@@ -66,5 +67,22 @@ public class IpBlockingFilter extends AbstractGatewayFilterFactory<IpBlockingFil
                 });
             });
         };
+    }
+
+    private String resolveClientIp(ServerWebExchange exchange) {
+        String realIp = exchange.getRequest().getHeaders().getFirst("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
+        }
+
+        String forwardedFor = exchange.getRequest().getHeaders().getFirst("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            // First entry is the original client; subsequent entries are proxies.
+            return forwardedFor.split(",")[0].trim();
+        }
+
+        return exchange.getRequest().getRemoteAddress() != null
+                ? exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
+                : "UNKNOWN";
     }
 }
