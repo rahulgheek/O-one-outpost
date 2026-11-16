@@ -12,8 +12,8 @@ RUN apk add --no-cache docker-cli curl
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-RUN chown -R appuser:appgroup /app
-USER appuser
+# RUN chown -R appuser:appgroup /app
+# USER appuser
 EXPOSE 8085
 ENV JAVA_OPTS="-Xmx256m -Xss256k -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
