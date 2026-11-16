@@ -29,8 +29,12 @@ public class SystemHealthService {
     @Value("${services.urls.gateway}")
     private String gatewayUrl;
 
-    public SystemHealthService() {
-        this.webClient = WebClient.create();
+    public SystemHealthService(@Value("${internal.secret:}") String internalSecret) {
+        WebClient.Builder builder = WebClient.builder();
+        if (internalSecret != null && !internalSecret.isBlank()) {
+            builder.defaultHeader("X-Internal-Token", internalSecret);
+        }
+        this.webClient = builder.build();
     }
 
     public Map<String, String> checkAllServices() {
