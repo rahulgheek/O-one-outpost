@@ -3,7 +3,9 @@ package com.aegis.code_sandbox.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.net.URI;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Central configuration for the judge.
@@ -481,6 +483,13 @@ public class JudgeProperties {
         private String baseUrl = "https://api.onlinecompiler.io";
         /** ONLINECOMPILER_COMPILER. openjdk-25 is OnlineCompiler's Java runtime. */
         private String compiler = "openjdk-25";
+        /**
+         * Optional per-language overrides, keyed by the judge language id
+         * (java, python, cpp, c, javascript, typescript, go, rust). Values are
+         * OnlineCompiler compiler ids. Empty means use the built-in default
+         * from {@link com.aegis.code_sandbox.judge.Language}.
+         */
+        private final Map<String, String> compilers = new LinkedHashMap<>();
         private long connectTimeoutMs = 5_000;
         /** The provider's hard execution ceiling is 30s; leave HTTP headroom. */
         private long responseTimeoutMs = 45_000;
@@ -516,6 +525,17 @@ public class JudgeProperties {
             if (compiler == null || compiler.isBlank()) {
                 throw new IllegalArgumentException("ONLINECOMPILER_COMPILER must not be blank");
             }
+            compilers.forEach((languageId, compilerId) -> {
+                if (com.aegis.code_sandbox.judge.Language.find(languageId).isEmpty()) {
+                    throw new IllegalArgumentException("Unknown language '" + languageId
+                            + "' in ONLINECOMPILER_COMPILERS; supported: "
+                            + com.aegis.code_sandbox.judge.Language.supportedIds());
+                }
+                if (compilerId == null || compilerId.isBlank()) {
+                    throw new IllegalArgumentException("ONLINECOMPILER_COMPILERS_" + languageId
+                            + " must not be blank");
+                }
+            });
             if (connectTimeoutMs < 100 || connectTimeoutMs > 60_000) {
                 throw new IllegalArgumentException("ONLINECOMPILER_CONNECT_TIMEOUT_MS must be between 100 and 60000");
             }
@@ -618,6 +638,28 @@ public class JudgeProperties {
 
         public void setCompiler(String compiler) {
             this.compiler = compiler;
+        }
+
+        public Map<String, String> getCompilers() {
+            return compilers;
+        }
+
+        /**
+         * Resolves the provider compiler id for a language. Explicit
+         * configuration wins; Java keeps honouring the legacy
+         * ONLINECOMPILER_COMPILER value; everything else uses the registry
+         * default.
+         */
+        public String compilerFor(com.aegis.code_sandbox.judge.Language language) {
+            String configured = compilers.get(language.id());
+            if (configured != null && !configured.isBlank()) {
+                return configured.trim();
+            }
+            if (language == com.aegis.code_sandbox.judge.Language.JAVA
+                    && compiler != null && !compiler.isBlank()) {
+                return compiler.trim();
+            }
+            return language.defaultCompiler();
         }
 
         public long getConnectTimeoutMs() {

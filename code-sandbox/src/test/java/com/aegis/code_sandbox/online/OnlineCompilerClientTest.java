@@ -81,6 +81,20 @@ class OnlineCompilerClientTest {
     }
 
     @Test
+    void forwardsTheRequestedCompiler() throws Exception {
+        AtomicReference<JsonNode> request = new AtomicReference<>();
+        startServer(exchange -> {
+            request.set(objectMapper.readTree(exchange.getRequestBody().readAllBytes()));
+            respond(exchange, 200, "{\"output\":\"ok\",\"status\":\"success\",\"exit_code\":0}");
+        });
+
+        new OnlineCompilerClient(properties(), objectMapper)
+                .run("print(1)", null, 1_000, 384, "python-3.14");
+
+        assertEquals("python-3.14", request.get().path("compiler").asText());
+    }
+
+    @Test
     void rejectsAnInvalidApiKeyWithAUsefulMessage() throws Exception {
         startServer(exchange -> respond(exchange, 401, "{\"error\":\"invalid API key\"}"));
 

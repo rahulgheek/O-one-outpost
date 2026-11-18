@@ -21,6 +21,8 @@ public class CandidateSubmission {
     private String problemId;
 
     private String submittedCode;
+    /** Judge language of the submission. */
+    private String language;
 
     // For partial credit scoring
     private int testCasesPassed;

@@ -57,18 +57,22 @@ public class MatchRecordService {
         int totalTests = problem.getTestCases() != null ? problem.getTestCases().size() : 0;
 
         // 2. WRAP THE CODE! Inject the hidden tests and main method
-        String rawJavaCode = request.code();
-        String executablePayload = codeGeneratorService.generateExecutableCode(rawJavaCode, problem);
+        String rawCode = request.code();
+        String languageId = request.language() == null || request.language().isBlank()
+                ? "java"
+                : request.language().trim().toLowerCase(java.util.Locale.ROOT);
+        String executablePayload = codeGeneratorService.generateExecutableCode(rawCode, problem, languageId);
 
         SandboxRequest updatedRequest = new SandboxRequest(
                 executablePayload,              // Wrapped executable code
                 problem.getTimeLimitMs(),        // Inject DB time limit
-                problem.getMemoryLimitKb()       // Inject DB memory limit
+                problem.getMemoryLimitKb(),      // Inject DB memory limit
+                languageId                       // Selects the sandbox compiler
         );
 
         // 3. Forward to Sandbox
 
-        log.info("Forwarding wrapped code for {} to Sandbox...", playerId);
+        log.info("Forwarding wrapped {} code for {} to Sandbox...", languageId, playerId);
 
         String sandboxOutput;
         try {
@@ -122,6 +126,8 @@ public class MatchRecordService {
             record.setMatchId(matchId);
             record.setWinnerId(playerId);
             record.setWinningStatus(finalResult);
+            record.setLanguage(languageId);
+            record.setSubmittedCode(rawCode);
             record.setTimestamp(LocalDateTime.now());
             matchRecordRepository.save(record);
 

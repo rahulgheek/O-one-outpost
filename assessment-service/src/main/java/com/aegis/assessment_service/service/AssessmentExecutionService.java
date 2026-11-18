@@ -13,6 +13,7 @@ import com.aegis.assessment_service.repository.CandidateSubmissionRepository;
 import com.aegis.assessment_service.repository.LeaderboardRecordRepository;
 import com.aegis.assessment_service.util.AssessmentClock;
 import com.aegis.assessment_service.util.AssessmentPolicy;
+import com.aegis.judge.harness.HarnessLanguage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,13 +45,26 @@ public class AssessmentExecutionService {
     private String sandboxUrl;
 
     @Transactional(noRollbackFor = SecurityException.class)
-    public SubmissionResult submitCode(String assessmentId, String candidateId, String problemId, String rawCode) {
+    public SubmissionResult submitCode(String assessmentId, String candidateId, String problemId,
+                                       String rawCode) {
+        return submitCode(assessmentId, candidateId, problemId, rawCode, null);
+    }
+
+    @Transactional(noRollbackFor = SecurityException.class)
+    public SubmissionResult submitCode(String assessmentId, String candidateId, String problemId,
+                                       String rawCode, String language) {
         if (rawCode == null || rawCode.isBlank()) {
             throw new IllegalArgumentException("Code cannot be empty.");
         }
         if (rawCode.length() > MAX_CODE_LENGTH) {
             throw new IllegalArgumentException("Submitted code exceeds the maximum allowed size.");
         }
+
+        String languageId = language == null || language.isBlank()
+                ? "java"
+                : language.trim().toLowerCase(Locale.ROOT);
+        // Reject an unknown language before touching the sandbox quota.
+        HarnessLanguage.resolve(languageId);
 
         Assessment assessment = assessmentRepository.findById(assessmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Assessment not found."));
@@ -101,8 +115,9 @@ public class AssessmentExecutionService {
                 .orElse(0);
 
         // ── Execute in the isolated sandbox ─────────────────────
-        String executablePayload = codeGeneratorService.generateExecutableCode(rawCode, problem);
-        SandboxRequest request = new SandboxRequest(executablePayload, problem.getTimeLimitMs(), problem.getMemoryLimitKb());
+        String executablePayload = codeGeneratorService.generateExecutableCode(rawCode, problem, languageId);
+        SandboxRequest request = new SandboxRequest(
+                executablePayload, problem.getTimeLimitMs(), problem.getMemoryLimitKb(), languageId);
 
         String sandboxOutput;
         try {
@@ -161,6 +176,7 @@ public class AssessmentExecutionService {
         submission.setCandidateId(candidateId);
         submission.setProblemId(problemId);
         submission.setSubmittedCode(rawCode);
+        submission.setLanguage(languageId);
         submission.setTestCasesPassed(passedTests);
         submission.setTotalTestCases(totalTests);
         submission.setPointsAwarded(pointsAwarded);

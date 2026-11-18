@@ -44,7 +44,7 @@ The system is broken down into independent, highly cohesive microservices that c
 | **Analytics Service** | `8082` | Aggregates user metrics, match histories, and platform statistics. |
 | **Assessment Service**| `8083` | Manages candidate test sessions, tracking progress, and evaluations. |
 | **Arena Service** | `8084` | Manages real-time coding matches, daily questions, and WebSockets for live collaborative events. |
-| **Code Sandbox** | `8085` | A highly secure execution engine. By default it compiles and runs Java submissions through OnlineCompiler.io; an optional warm Docker container pool is available as a secondary backend. |
+| **Code Sandbox** | `8085` | A highly secure execution engine. By default it compiles and runs submissions in Java, Python, C++, C, JavaScript, TypeScript, Go and Rust through OnlineCompiler.io; the optional warm Docker container pool is a secondary backend that supports Java only. |
 
 ---
 
@@ -158,8 +158,8 @@ The root `docker-compose.prod.yml` and `.github/workflows/deploy.yml` still desc
 
 Executing untrusted user code is inherently dangerous. O(1) Outpost mitigates this risk with two interchangeable execution backends:
 
-1. **OnlineCompiler.io (default)**: submissions are compiled and run in the provider's fresh, network-isolated sandbox over HTTPS. The API key is server-side only. This removes the need to operate a Docker host.
-2. **Warm Docker Container Pool (secondary)**: when `JUDGE_EXECUTION_BACKEND=docker`, the sandbox keeps pre-warmed, idle Docker containers (`eclipse-temurin:17-alpine`), injects the submission, then destroys and replaces the container after every run.
+1. **OnlineCompiler.io (default)**: submissions in Java, Python, C++, C, JavaScript, TypeScript, Go and Rust are compiled and run in the provider's fresh, network-isolated sandbox over HTTPS. The API key is server-side only. This removes the need to operate a Docker host.
+2. **Warm Docker Container Pool (secondary)**: when `JUDGE_EXECUTION_BACKEND=docker`, the sandbox keeps pre-warmed, idle Docker containers (`eclipse-temurin:17-alpine`), injects the submission, then destroys and replaces the container after every run. This backend supports Java only; other languages are rejected.
 3. **Hardened Docker restrictions** (secondary backend only):
    - `--network none`: No internet access for executing code.
    - Memory and CPU are strictly capped (`--memory=128m`, `--cpus=0.5`).

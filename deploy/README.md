@@ -57,7 +57,7 @@ Outside Botkeep:
 | PostgreSQL | Neon | managed | Auth + Analytics |
 | MongoDB | Atlas | managed | Arena + Assessment |
 | Redis | Upstash | managed | Gateway rate limiting + Auth OTP |
-| OnlineCompiler.io | Provider SaaS | `api.onlinecompiler.io` | Remote Java execution backend (outbound only) |
+| OnlineCompiler.io | Provider SaaS | `api.onlinecompiler.io` | Remote multi-language execution backend (outbound only) |
 
 > If you want the frontend on Botkeep too, it consumes a **sixth** workload
 > slot. With exactly five slots, keep the frontend on Vercel or add a plan.

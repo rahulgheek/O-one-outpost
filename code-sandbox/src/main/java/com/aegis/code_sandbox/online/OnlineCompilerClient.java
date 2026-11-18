@@ -61,6 +61,12 @@ public class OnlineCompilerClient {
     }
 
     public RunResponse run(String code, String input, int timeLimitMs, int providerMemoryMb) {
+        return run(code, input, timeLimitMs, providerMemoryMb,
+                properties.getOnlineCompiler().getCompiler());
+    }
+
+    public RunResponse run(String code, String input, int timeLimitMs, int providerMemoryMb,
+                           String compiler) {
         JudgeProperties.OnlineCompiler config = properties.getOnlineCompiler();
         String apiKey = config.getApiKey() == null ? "" : config.getApiKey().trim();
         if (apiKey.isEmpty()) {
@@ -70,8 +76,11 @@ public class OnlineCompilerClient {
         if (code == null || code.isEmpty()) {
             throw new OnlineCompilerException(-1, "No source code was provided.");
         }
+        if (compiler == null || compiler.isBlank()) {
+            throw new OnlineCompilerException(-1, "No OnlineCompiler compiler id was resolved.");
+        }
 
-        String json = requestJson(code, input, timeLimitMs, providerMemoryMb);
+        String json = requestJson(code, input, timeLimitMs, providerMemoryMb, compiler);
         URI endpoint = URI.create(trimTrailingSlash(config.getBaseUrl()) + RUN_PATH);
         int maxRetries = Math.max(0, config.getMaxRetries());
 
@@ -121,10 +130,10 @@ public class OnlineCompilerClient {
         }
     }
 
-    private String requestJson(String code, String input, int timeLimitMs, int providerMemoryMb) {
-        JudgeProperties.OnlineCompiler config = properties.getOnlineCompiler();
+    private String requestJson(String code, String input, int timeLimitMs, int providerMemoryMb,
+                               String compiler) {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("compiler", config.getCompiler());
+        body.put("compiler", compiler);
         body.put("code", code);
         if (input != null && !input.isEmpty()) {
             body.put("input", input);

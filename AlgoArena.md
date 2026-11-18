@@ -773,7 +773,7 @@ For a 500-candidate event with 3 problems and 4 submissions each, that is 6,000 
 - Per-problem time limits cap runaway executions.
 - Container limits prevent one submission from consuming a whole core.
 - Static problem statements and small payloads keep bandwidth negligible.
-- Java-only execution keeps the runtime image and toolchain simple; each added language adds image size, compile time, and security surface.
+- Remote execution offloads toolchains to the provider; per-language compilers are pinned by configuration. The optional Docker fallback supports Java only, so each additional executor image would add size, compile time, and security surface.
 
 ### 10.5 Go-to-market
 
@@ -814,7 +814,7 @@ A two-sided marketplace cannot launch both sides at once. The practical sequence
 | Two-sided cold start | No engineers → no companies; no companies → no reason to compete | Supply-first campus/community launch; free arena; seed with public contests |
 | Cheating / AI assistance | Undermines the hiring signal | Server-side tests, blackout leaderboard, proctoring signals, plagiarism analysis, randomised problem sets |
 | Sandbox escape | A host compromise is existential | Dedicated worker nodes, rootless Docker, seccomp/AppArmor, gVisor/Firecracker, no host socket in the long term |
-| Language coverage | Java-only limits the addressable market | Add runtimes incrementally with per-language images and resource profiles |
+| Language coverage | The remote judge covers eight languages, but the self-hosted Docker fallback is Java-only | Add per-language Docker executor images and resource profiles for the secondary backend |
 | Big-platform competition | HackerRank, CodeSignal, LeetCode have distribution | Differentiate on live arena engagement + verified Elo + private hiring workflow, not on problem count |
 | Sales cycle | Enterprise hiring software is slow to buy | Start with self-serve pilots and campus packages; expand to enterprise later |
 | Privacy / candidate data | Rich profiles include personal data | Data minimisation, retention policy, access controls, consent, regional hosting |
@@ -885,7 +885,7 @@ A portfolio project is more credible when it is precise about what is shipped.
 
 | Area | Current state | Next step |
 |---|---|---|
-| Language support | The live arena and routed assessment workspace execute **Java**; the landing page's "10+ languages" is positioning copy, not shipped capability | Add per-language runtimes with isolated images and resource profiles |
+| Language support | The live arena and routed assessment workspace execute **Java, Python, C++, C, JavaScript, TypeScript, Go and Rust** through OnlineCompiler.io; the Docker fallback executes Java only | Add per-language Docker executor images for the secondary backend |
 | Sandbox trust | Runs through the host Docker socket, which grants substantial host authority | Dedicated worker nodes, rootless Docker, seccomp/AppArmor, gVisor or Firecracker |
 | Matchmaking concurrency | Pairing is optimistic (find waiting match, then save); concurrent joins can create unmatched waiting matches | Atomic claim with `findOneAndUpdate` on `status = WAITING` |
 | Cross-document consistency | Elo, match record, and profiles are separate writes; a partial failure can drift | Transactional outbox or a reconciliation job |

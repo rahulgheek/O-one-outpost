@@ -68,9 +68,11 @@ public class CandidateAssessmentController {
         if (rawCode == null || rawCode.trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Code cannot be empty.");
         }
+        String language = payload == null ? null : payload.get("language");
 
         try {
-            SubmissionResult result = executionService.submitCode(assessmentId, candidateId, problemId, rawCode);
+            SubmissionResult result = executionService.submitCode(
+                    assessmentId, candidateId, problemId, rawCode, language);
             return ResponseEntity.ok(result);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());

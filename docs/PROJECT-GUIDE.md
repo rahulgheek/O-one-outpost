@@ -168,9 +168,16 @@ secret/configuration mechanism; do not commit them. Do not copy production
 credentials into development.
 
 The sandbox sends submissions to the OnlineCompiler.io HTTPS API by default and
-needs only an `ONLINECOMPILER_API_KEY`. The optional Docker backend requires an
-explicit `JUDGE_DOCKER_HOST` or `JUDGE_DOCKER_SSH_HOST` plus access to a Docker
-Engine, and is privileged; use a trusted development host and read the
+needs only an `ONLINECOMPILER_API_KEY`. Arena, tournament and assessment
+submissions may be written in Java, Python, C++, C, JavaScript, TypeScript, Go
+or Rust; the client sends a `language` id and the sandbox selects the matching
+compiler. Defaults are pinned in `code-sandbox/src/main/resources/application.yaml`
+and can be overridden per language with `ONLINECOMPILER_COMPILER_<LANGUAGE>`
+(for example `ONLINECOMPILER_COMPILER_CPP=g++-15-cpp20`). The legacy
+`ONLINECOMPILER_COMPILER` value remains the Java fallback. The optional Docker
+backend requires an explicit `JUDGE_DOCKER_HOST` or `JUDGE_DOCKER_SSH_HOST`
+plus access to a Docker Engine, is privileged, and supports Java only; use a
+trusted development host and read the
 [deployment security notes](./README-deployment.md) before enabling it.
 
 ### Start the web client

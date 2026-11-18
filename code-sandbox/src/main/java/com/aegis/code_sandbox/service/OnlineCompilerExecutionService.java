@@ -4,6 +4,7 @@ import com.aegis.code_sandbox.config.JudgeProperties;
 import com.aegis.code_sandbox.dto.ExecutionRequest;
 import com.aegis.code_sandbox.dto.ExecutionResult;
 import com.aegis.code_sandbox.judge.JudgeOutput;
+import com.aegis.code_sandbox.judge.Language;
 import com.aegis.code_sandbox.judge.Verdict;
 import com.aegis.code_sandbox.online.OnlineCompilerClient;
 import com.aegis.code_sandbox.online.OnlineCompilerException;
@@ -16,24 +17,24 @@ import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 /**
- * Executes Java submissions through the OnlineCompiler.io synchronous API.
+ * Executes submissions through the OnlineCompiler.io synchronous API.
  *
  * <p>The provider compiles and runs the complete generated harness in a remote
  * sandbox. Its run time and peak memory are reported back; CPU time is not
  * exposed by the API, so {@code cpuTimeMs} is {@code -1}. Provider exit code
  * 124 is TLE and 137 is MLE. A provider timeout is never retried because the
  * remote run may already have been billed.</p>
+ *
+ * <p>The requested language selects both the provider compiler id and the
+ * compiler/memory diagnostic patterns used for verdict classification.</p>
  */
 @Service
 public class OnlineCompilerExecutionService {
 
     private static final Logger log = LoggerFactory.getLogger(OnlineCompilerExecutionService.class);
     private static final long BYTES_PER_KB = 1024L;
-    private static final Pattern JAVA_COMPILER_DIAGNOSTIC =
-            Pattern.compile("(?m)\\.java:\\d+:\\s*(?:error|warning):");
 
     private final OnlineCompilerClient client;
     private final JudgeProperties properties;
@@ -45,6 +46,8 @@ public class OnlineCompilerExecutionService {
 
     public ExecutionResult execute(ExecutionRequest request, int effectiveTimeMs, int memoryMb) {
         JudgeProperties.OnlineCompiler config = properties.getOnlineCompiler();
+        Language language = Language.resolve(request.language());
+        String compiler = config.compilerFor(language);
 
         byte[] source = request.code().getBytes(StandardCharsets.UTF_8);
         if (source.length > config.getMaxCodeBytes()) {
@@ -62,7 +65,7 @@ public class OnlineCompilerExecutionService {
         long started = System.nanoTime();
         OnlineCompilerClient.RunResponse response;
         try {
-            response = client.run(request.code(), input, effectiveTimeMs, providerMemoryMb);
+            response = client.run(request.code(), input, effectiveTimeMs, providerMemoryMb, compiler);
         } catch (OnlineCompilerException e) {
             return providerFailure(e);
         }
@@ -70,6 +73,7 @@ public class OnlineCompilerExecutionService {
 
         String stdout = response.output() == null ? "" : response.output();
         String stderr = response.error() == null ? "" : response.error();
+        String combined = stdout + "\n" + stderr;
         long reportedMs = secondsToMillis(response.time(), effectiveTimeMs);
         long totalMs = secondsToMillis(response.total(), localWallMs);
         long memoryKb = parseLong(response.memory(), 0);
@@ -83,12 +87,12 @@ public class OnlineCompilerExecutionService {
             verdict = Verdict.TLE;
             message = "Time limit exceeded (limit " + effectiveTimeMs + "ms; provider stopped after "
                     + reportedMs + "ms).";
-        } else if (exitCode == 137 || (exitCode != 0 && mentionsMemoryLimit(stdout, stderr))) {
+        } else if (exitCode == 137 || (exitCode != 0 && mentionsMemoryLimit(language, combined))) {
             verdict = Verdict.MLE;
             message = "Memory limit exceeded (requested " + memoryMb + "MB; observed "
                     + (memoryKb / BYTES_PER_KB) + "MB).";
         } else if (exitCode != 0) {
-            if (looksLikeCompilationError(stdout, stderr)) {
+            if (looksLikeCompilationError(language, combined)) {
                 verdict = Verdict.CE;
                 message = "Compilation failed.";
             } else if (exitCode == 153) {
@@ -102,7 +106,7 @@ public class OnlineCompilerExecutionService {
                 message = "Runtime error (exit code " + exitCode + ").";
             }
         } else if ("error".equalsIgnoreCase(response.status())) {
-            if (looksLikeCompilationError(stdout, stderr)) {
+            if (looksLikeCompilationError(language, combined)) {
                 verdict = Verdict.CE;
                 message = "Compilation failed.";
             } else {
@@ -127,8 +131,9 @@ public class OnlineCompilerExecutionService {
         long wallMs = totalMs > 0 ? totalMs : localWallMs;
         int passed = counts.passed() == null ? 0 : counts.passed();
 
-        log.info("OnlineCompiler result: verdict={} time={}ms total={}ms memory={}KB exit={} status={}",
-                verdict, timeMs, wallMs, memoryKb, exitCode, response.status());
+        log.info("OnlineCompiler result: language={} compiler={} verdict={} time={}ms total={}ms "
+                        + "memory={}KB exit={} status={}",
+                language.id(), compiler, verdict, timeMs, wallMs, memoryKb, exitCode, response.status());
 
         return new ExecutionResult(
                 verdict,
@@ -152,6 +157,34 @@ public class OnlineCompilerExecutionService {
         return Math.max(16, Math.min(config.getMaxMemoryMb(), withHeadroom));
     }
 
+    /**
+     * Combines the per-language diagnostics with the provider's generic
+     * messages. Older provider responses report a bare "compilation failed" or
+     * "compiler error" without naming the language, and dropping that fallback
+     * would turn a genuine CE into an RE.
+     */
+    private static boolean looksLikeCompilationError(Language language, String combinedOutput) {
+        if (language.looksLikeCompilationError(combinedOutput)) {
+            return true;
+        }
+        if (combinedOutput == null || combinedOutput.isBlank()) {
+            return false;
+        }
+        String lower = combinedOutput.toLowerCase(Locale.ROOT);
+        return lower.contains("compilation failed")
+                || lower.contains("compiler error")
+                || lower.contains("compilation error");
+    }
+
+    /** Per-language memory hints plus the provider's generic kill message. */
+    private static boolean mentionsMemoryLimit(Language language, String combinedOutput) {
+        if (language.mentionsMemoryLimit(combinedOutput)) {
+            return true;
+        }
+        return combinedOutput != null
+                && combinedOutput.toLowerCase(Locale.ROOT).contains("memory limit exceeded");
+    }
+
     private ExecutionResult providerFailure(OnlineCompilerException e) {
         String message;
         if (e.statusCode() == 401 || e.statusCode() == 403) {
@@ -163,25 +196,6 @@ public class OnlineCompilerExecutionService {
         }
         log.warn("OnlineCompiler execution failed (status={}): {}", e.statusCode(), message);
         return internalError(message);
-    }
-
-    private static boolean looksLikeCompilationError(String stdout, String stderr) {
-        String combined = (stdout == null ? "" : stdout) + "\n" + (stderr == null ? "" : stderr);
-        String lower = combined.toLowerCase(Locale.ROOT);
-        return JAVA_COMPILER_DIAGNOSTIC.matcher(combined).find()
-                || lower.contains("compilation failed")
-                || lower.contains("compiler error")
-                || (lower.contains("error:") && lower.contains(".java:"));
-    }
-
-    private static boolean mentionsMemoryLimit(String stdout, String stderr) {
-        String combined = ((stdout == null ? "" : stdout) + "\n" + (stderr == null ? "" : stderr))
-                .toLowerCase(Locale.ROOT);
-        return combined.contains("memory limit exceeded")
-                || combined.contains("outofmemoryerror")
-                || combined.contains("java heap space")
-                || combined.contains("gc overhead limit exceeded")
-                || combined.contains("native memory allocation");
     }
 
     private static long secondsToMillis(String value, long fallback) {

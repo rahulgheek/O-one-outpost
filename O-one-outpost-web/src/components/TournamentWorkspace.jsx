@@ -4,12 +4,16 @@ import Editor from '@monaco-editor/react';
 import { candidateApi } from '../services/candidateApi';
 import { getApiErrorMessage } from '../utils/errors';
 import useTournamentTimer from '../hooks/useTournamentTimer';
+import {
+    DEFAULT_LANGUAGE,
+    LANGUAGES,
+    monacoLanguage,
+    starterCodeMap,
+} from '../constants/languages';
 
 // ─── CONSTANTS ────────────────────────────────────────────────
 const BLUR_GRACE_SECONDS = 5;   // Seconds before blur triggers termination
 const TAB_GRACE_SECONDS = 3;    // Slightly shorter for tab-switch (more deliberate)
-
-const DEFAULT_CODE = '// Write your solution here\nclass Solution {\n\n}';
 
 export default function TournamentWorkspace() {
     const { assessmentId } = useParams();
@@ -21,6 +25,9 @@ export default function TournamentWorkspace() {
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState('');
     const [codeStore, setCodeStore] = useState({});
+    // Active language per problem, so changing problems or languages never
+    // discards code written in another language.
+    const [languageStore, setLanguageStore] = useState({});
     const [consoleOutput, setConsoleOutput] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isFullscreenInit, setIsFullscreenInit] = useState(false);
@@ -182,7 +189,7 @@ export default function TournamentWorkspace() {
 
                 const initialCode = {};
                 (loadedProblems || []).forEach((problem) => {
-                    initialCode[problem.id] = problem.startingCodeJava || DEFAULT_CODE;
+                    initialCode[problem.id] = starterCodeMap(problem);
                 });
                 setCodeStore(initialCode);
                 setIsLoading(false);
@@ -202,10 +209,27 @@ export default function TournamentWorkspace() {
     }, [assessmentId]);
 
     const activeProblem = problems[activeIdx] || null;
+    const activeLanguage = activeProblem
+        ? (languageStore[activeProblem.id] || DEFAULT_LANGUAGE)
+        : DEFAULT_LANGUAGE;
+    const activeCode = activeProblem
+        ? (codeStore[activeProblem.id]?.[activeLanguage] || '')
+        : '';
+
+    const handleLanguageChange = (nextLanguage) => {
+        if (!activeProblem) return;
+        setLanguageStore((previous) => ({ ...previous, [activeProblem.id]: nextLanguage }));
+    };
 
     const handleEditorChange = (value) => {
         if (!activeProblem) return;
-        setCodeStore((previous) => ({ ...previous, [activeProblem.id]: value }));
+        setCodeStore((previous) => ({
+            ...previous,
+            [activeProblem.id]: {
+                ...(previous[activeProblem.id] || {}),
+                [activeLanguage]: value ?? '',
+            },
+        }));
     };
 
     const addLog = (sender, message, color) => {
@@ -222,7 +246,8 @@ export default function TournamentWorkspace() {
             const result = await candidateApi.submitCode(
                 assessmentId,
                 activeProblem.id,
-                codeStore[activeProblem.id] || '',
+                activeCode,
+                activeLanguage,
             );
 
             if (result.executionStatus === 'ALL_PASSED') {
@@ -668,9 +693,31 @@ export default function TournamentWorkspace() {
                         flexShrink: 0,
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ color: '#27272a', fontSize: '0.6rem', letterSpacing: '2px', fontFamily: '"Share Tech Mono", monospace' }}>
-                                JAVA 17
-                            </span>
+                            <select
+                                value={activeLanguage}
+                                onChange={(event) => handleLanguageChange(event.target.value)}
+                                disabled={isLocked}
+                                aria-label="Programming language"
+                                style={{
+                                    background: 'rgba(0,255,180,0.04)',
+                                    border: '1px solid rgba(0,255,180,0.14)',
+                                    color: '#00ffb4',
+                                    fontSize: '0.62rem',
+                                    letterSpacing: '2px',
+                                    fontFamily: '"Share Tech Mono", monospace',
+                                    padding: '5px 8px',
+                                    borderRadius: '3px',
+                                    outline: 'none',
+                                    cursor: isLocked ? 'not-allowed' : 'pointer',
+                                    opacity: isLocked ? 0.5 : 1,
+                                }}
+                            >
+                                {LANGUAGES.map(({ id, label }) => (
+                                    <option key={id} value={id} style={{ background: '#07070b', color: '#ddd' }}>
+                                        {label}
+                                    </option>
+                                ))}
+                            </select>
                             {isLocked && (
                                 <span style={{ color: '#ef4444', fontSize: '0.6rem', letterSpacing: '2px', fontFamily: '"Share Tech Mono", monospace' }}>
                                     · READ ONLY
@@ -701,9 +748,9 @@ export default function TournamentWorkspace() {
                     <div style={{ flex: 6, minHeight: 0 }}>
                         <Editor
                             height="100%"
-                            language="java"
+                            language={monacoLanguage(activeLanguage)}
                             theme="vs-dark"
-                            value={activeProblem ? (codeStore[activeProblem.id] || '') : ''}
+                            value={activeCode}
                             onChange={handleEditorChange}
                             options={{
                                 readOnly: isLocked,

@@ -4,6 +4,12 @@ import Editor from '@monaco-editor/react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import axios from 'axios';
+import {
+  DEFAULT_LANGUAGE,
+  LANGUAGES,
+  monacoLanguage,
+  starterCodeMap,
+} from '../constants/languages';
 
 const GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:8080';
 const ARENA_WS_URL = (import.meta.env.VITE_ARENA_WS_URL || 'ws://localhost:8084').replace(/^ws/, 'http');
@@ -15,7 +21,10 @@ export default function Arena({ currentUser, getToken }) {
   const problemId = location.state?.problemId;
 
   const [problem, setProblem] = useState(null);
-  const [code, setCode] = useState('');
+  const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
+  // Code is kept per language so switching languages never discards work.
+  const [codeByLanguage, setCodeByLanguage] = useState({});
+  const code = codeByLanguage[language] ?? '';
   const [logs, setLogs] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [matchFinished, setMatchFinished] = useState(false);
@@ -57,7 +66,7 @@ export default function Arena({ currentUser, getToken }) {
       headers: { Authorization: `Bearer ${getToken()}` },
     }).then(res => {
       setProblem(res.data);
-      setCode(res.data.startingCodeJava || '// Write your solution here\nclass Solution {\n\n}');
+      setCodeByLanguage(starterCodeMap(res.data));
       addLog('SYSTEM', `Problem loaded: ${res.data.title}`, 'system');
       // Initialize progress totals from problem data
       const totalTests = res.data.testCases?.length || 0;
@@ -162,7 +171,7 @@ export default function Arena({ currentUser, getToken }) {
     try {
       await axios.post(
         `${GATEWAY_URL}/api/match/${matchId}/submit`,
-        { code, language: 'java' },
+        { code, language },
         { headers: { Authorization: `Bearer ${getToken()}` } }
       );
     } catch (err) {
@@ -451,16 +460,27 @@ export default function Arena({ currentUser, getToken }) {
           gap: 10px;
         }
 
-        .arena-lang-badge {
-          color: #888;
+        .arena-lang-select {
+          color: #ff9a3c;
           font-size: 0.72rem;
           letter-spacing: 2px;
           font-family: 'Share Tech Mono', monospace;
-          padding: 5px 12px;
+          padding: 5px 8px;
           border-radius: 8px;
           background: rgba(255, 122, 0, 0.06);
           border: 1px solid rgba(255, 122, 0, 0.12);
-          white-space: nowrap;
+          outline: none;
+          cursor: pointer;
+        }
+
+        .arena-lang-select option {
+          background: #14100c;
+          color: #ddd;
+        }
+
+        .arena-lang-select:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .arena-timer {
@@ -804,7 +824,17 @@ export default function Arena({ currentUser, getToken }) {
           {/* ── Toolbar with Progress Bars ── */}
           <div className="arena-toolbar">
             <div className="arena-toolbar-left">
-              <span className="arena-lang-badge">JAVA 17</span>
+              <select
+                className="arena-lang-select"
+                value={language}
+                onChange={e => setLanguage(e.target.value)}
+                disabled={matchFinished}
+                aria-label="Programming language"
+              >
+                {LANGUAGES.map(({ id, label }) => (
+                  <option key={id} value={id}>{label}</option>
+                ))}
+              </select>
               <div className="arena-timer">
                 <div className="arena-timer-dot" style={
                   matchFinished
@@ -861,10 +891,10 @@ export default function Arena({ currentUser, getToken }) {
             <div style={{ flex: 6, minHeight: 0 }}>
               <Editor
                 height="100%"
-                defaultLanguage="java"
+                language={monacoLanguage(language)}
                 theme="vs-dark"
                 value={code}
-                onChange={v => setCode(v)}
+                onChange={v => setCodeByLanguage(prev => ({ ...prev, [language]: v ?? '' }))}
                 options={{
                   minimap: { enabled: false },
                   fontSize: 14,

@@ -32,8 +32,11 @@ export const candidateApi = {
             throw error;
         }
     },
-    submitCode: async (assessmentId, problemId, code) => {
-        const response = await apiClient.post(`/workspace/${assessmentId}/problem/${problemId}/submit`, { code });
+    submitCode: async (assessmentId, problemId, code, language = 'java') => {
+        const response = await apiClient.post(
+            `/workspace/${assessmentId}/problem/${problemId}/submit`,
+            { code, language },
+        );
         return response.data;
     },
     getAssessmentDirectory: async (page = 0, size = 20, search = '') => {

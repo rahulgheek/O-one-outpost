@@ -3,6 +3,9 @@ package com.aegis.assessment_service.service;
 import com.aegis.assessment_service.entitiy.CompanyProblem;
 import com.aegis.assessment_service.repository.CompanyProblemRepository;
 import com.aegis.assessment_service.util.AssessmentPolicy;
+import com.aegis.judge.harness.HarnessGenerator;
+import com.aegis.judge.harness.HarnessLanguage;
+import com.aegis.judge.harness.HarnessSpec;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,9 +20,10 @@ public class CompanyProblemService {
     private static final Set<String> ALLOWED_DIFFICULTIES = Set.of("EASY", "MEDIUM", "HARD");
 
     /**
-     * The generated Java harness parses inputs and formats outputs with a fixed
-     * set of types. Anything else would compile locally in the builder UI but
-     * fail at submission time, so reject it when the problem is created.
+     * The generated harness renders inputs and compares outputs with a fixed,
+     * language-neutral type set. Anything else would look fine in the builder
+     * but fail at submission time in one or more languages, so reject it when
+     * the problem is created.
      */
     private static final Set<String> ALLOWED_PARAMETER_TYPES = Set.of(
             "int", "long", "double", "boolean", "String", "int[]");
@@ -77,16 +81,18 @@ public class CompanyProblemService {
         }
 
         if (problem.getMethodName() == null || problem.getMethodName().isBlank()) {
-            throw new IllegalArgumentException("Method name is required for the Java harness.");
+            throw new IllegalArgumentException("Method name is required for the judge harness.");
         }
-        // The harness inserts the method name into generated Java source.
-        if (!problem.getMethodName().trim().matches("[A-Za-z_$][A-Za-z0-9_$]*")) {
-            throw new IllegalArgumentException("Method name must be a valid Java identifier.");
+        // The harness inserts the method name into generated source in every
+        // supported language, so only the common identifier subset is safe.
+        if (!problem.getMethodName().trim().matches("[A-Za-z_][A-Za-z0-9_]*")) {
+            throw new IllegalArgumentException(
+                    "Method name must be a valid identifier shared by all supported languages.");
         }
         problem.setMethodName(problem.getMethodName().trim());
 
         if (problem.getReturnType() == null || problem.getReturnType().isBlank()) {
-            throw new IllegalArgumentException("Return type is required for the Java harness.");
+            throw new IllegalArgumentException("Return type is required for the judge harness.");
         }
         if (!ALLOWED_RETURN_TYPES.contains(problem.getReturnType().trim())) {
             throw new IllegalArgumentException(
@@ -135,8 +141,32 @@ public class CompanyProblemService {
         }
 
         if (problem.getStartingCodeJava() == null || problem.getStartingCodeJava().isBlank()) {
-            problem.setStartingCodeJava("class Solution {\n    // Write your solution here\n}");
+            HarnessSpec.Signature signature = new HarnessSpec.Signature(
+                    problem.getMethodName(), problem.getReturnType(), problem.getParameterTypes());
+            problem.setStartingCodeJava(HarnessGenerator.starterCode(HarnessLanguage.JAVA, signature));
         }
         problem.setDifficulty(difficulty.toUpperCase(Locale.ROOT));
+
+        // Fail fast if any literal cannot be rendered by every language's
+        // harness. Submissions would otherwise fail only after the candidate
+        // has already spent time on the problem.
+        validateHarnessData(problem);
+    }
+
+    private void validateHarnessData(CompanyProblem problem) {
+        HarnessSpec.Signature signature = new HarnessSpec.Signature(
+                problem.getMethodName(), problem.getReturnType(), problem.getParameterTypes());
+        List<HarnessSpec.TestCase> testCases = problem.getTestCases().stream()
+                .map(testCase -> new HarnessSpec.TestCase(
+                        testCase.getInputs(), testCase.getExpectedOutput()))
+                .toList();
+        new HarnessSpec.Spec(signature, testCases);
+
+        List<HarnessSpec.Kind> kinds = signature.parameterKinds();
+        for (HarnessSpec.TestCase testCase : testCases) {
+            for (int i = 0; i < kinds.size(); i++) {
+                HarnessSpec.parseLiteral(testCase.inputs().get(i), kinds.get(i));
+            }
+        }
     }
 }

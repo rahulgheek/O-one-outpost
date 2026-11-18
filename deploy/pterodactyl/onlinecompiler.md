@@ -13,7 +13,7 @@ that path use [`code-sandbox.md`](./code-sandbox.md).
 Pterodactyl node                              Internet
 ┌───────────────────────────┐                ┌──────────────────────────────┐
 │ code-sandbox container    │   HTTPS 443    │ api.onlinecompiler.io        │
-│  - Spring Boot API :PORT  │───────────────▶│  - compiles openjdk-25       │
+│  - Spring Boot API :PORT  │───────────────▶│  - compiles/runs 8 languages │
 │  - judge harness generator│  Authorization │  - runs in a fresh sandbox   │
 │  - NO Docker CLI/socket   │  <API_KEY>     │  - no network in the run     │
 └───────────────────────────┘                └──────────────────────────────┘
@@ -26,11 +26,13 @@ Pterodactyl node                              Internet
 
 ## 1. How execution works
 
-1. `arena-service` / `assessment-service` POST the generated `Main.java` harness
-   to `/api/sandbox/execute` or `/api/sandbox/execute/result`.
-2. `code-sandbox` resolves and clamps the time/memory limits.
+1. `arena-service` / `assessment-service` POST a generated harness (named
+   `Main.{java,py,cpp,c,...}` per language) to `/api/sandbox/execute` or
+   `/api/sandbox/execute/result`, together with the selected `language` id.
+2. `code-sandbox` resolves the compiler id for that language, then clamps the
+   time/memory limits.
 3. It sends `POST https://api.onlinecompiler.io/api/run-code-sync/` with the
-   source and `Authorization: <API_KEY>`.
+   source, the compiler id and `Authorization: <API_KEY>`.
 4. The provider compiles and runs the whole harness, then returns
    `output`, `error`, `status`, `exit_code`, `time`, `total`, and `memory`.
 5. The sandbox maps the provider result to the normal verdicts: `AC`, `WA`,
@@ -167,6 +169,17 @@ ONLINECOMPILER_API_KEY=<paste your key here>
 ONLINECOMPILER_BASE_URL=https://api.onlinecompiler.io
 ONLINECOMPILER_COMPILER=openjdk-25
 
+# Optional per-language overrides. Defaults are listed below; pin any language
+# independently when the provider publishes a newer runtime.
+# ONLINECOMPILER_COMPILER_JAVA=openjdk-25
+# ONLINECOMPILER_COMPILER_PYTHON=python-3.14
+# ONLINECOMPILER_COMPILER_CPP=g++-15
+# ONLINECOMPILER_COMPILER_C=gcc-15
+# ONLINECOMPILER_COMPILER_JAVASCRIPT=nodejs-24
+# ONLINECOMPILER_COMPILER_TYPESCRIPT=typescript-deno
+# ONLINECOMPILER_COMPILER_GO=go-1.26
+# ONLINECOMPILER_COMPILER_RUST=rust-1.93
+
 ONLINECOMPILER_MAX_CONCURRENCY=4
 ONLINECOMPILER_MEMORY_HEADROOM_MB=256
 ONLINECOMPILER_MAX_MEMORY_MB=512
@@ -183,6 +196,26 @@ JUDGE_API_ONLY_MODE=false
 ```
 
 Full template: [`code-sandbox/.env.example`](../../code-sandbox/.env.example).
+
+The sandbox accepts the eight judge language ids below. `ONLINECOMPILER_COMPILER`
+is still the Java fallback; set `ONLINECOMPILER_COMPILER_<LANGUAGE>` to pin a
+different provider runtime for one language.
+
+| Language | Id | Default compiler |
+|---|---|---|
+| Java | `java` | `openjdk-25` |
+| Python | `python` | `python-3.14` |
+| C++ | `cpp` | `g++-15` |
+| C | `c` | `gcc-15` |
+| JavaScript | `javascript` | `nodejs-24` |
+| TypeScript | `typescript` | `typescript-deno` |
+| Go | `go` | `go-1.26` |
+| Rust | `rust` | `rust-1.93` |
+
+Arena/tournament problems and assessment problems store one method signature
+and generate an equivalent harness for every language. C and Rust support
+scalar types plus `int[]` parameters; other array parameter types are rejected
+when the problem is created.
 
 No Docker variable is required. The Docker `ContainerPool` remains in the
 codebase as a secondary backend, but the default `application.yaml` does not
