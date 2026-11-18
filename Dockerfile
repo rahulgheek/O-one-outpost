@@ -8,12 +8,16 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
-RUN apk add --no-cache docker-cli curl
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# curl is only used by the container health check. There is deliberately no
+# Docker CLI in this image: the judge talks to the Engine API directly.
+RUN apk add --no-cache curl \
+    && addgroup -S appgroup \
+    && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
-# RUN chown -R appuser:appgroup /app
-# USER appuser
+COPY --chown=appuser:appgroup --from=build /app/target/*.jar app.jar
+USER appuser
 EXPOSE 8085
-ENV JAVA_OPTS="-Xmx256m -Xss256k -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENV JAVA_OPTS="-Xms64m -Xmx256m -Xss256k -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ExitOnOutOfMemoryError"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+    CMD curl -fsS http://localhost:8085/actuator/health || exit 1
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

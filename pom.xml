@@ -28,6 +28,8 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<docker-java.version>3.7.1</docker-java.version>
+		<jsch.version>2.28.8</jsch.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -37,6 +39,25 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
+		<!-- Docker Engine API client. No Docker CLI is required in the app image. -->
+		<dependency>
+			<groupId>com.github.docker-java</groupId>
+			<artifactId>docker-java-core</artifactId>
+			<version>${docker-java.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.docker-java</groupId>
+			<artifactId>docker-java-transport-zerodep</artifactId>
+			<version>${docker-java.version}</version>
+		</dependency>
+
+		<!-- SSH tunnel used for DOCKER_HOST=ssh://... (docker system dial-stdio). -->
+		<dependency>
+			<groupId>com.github.mwiede</groupId>
+			<artifactId>jsch</artifactId>
+			<version>${jsch.version}</version>
 		</dependency>
 
 		<dependency>
