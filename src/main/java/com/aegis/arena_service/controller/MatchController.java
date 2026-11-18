@@ -45,7 +45,14 @@ public class MatchController {
             @RequestHeader("loggedInUser") String playerId,
             @RequestBody SandboxRequest request) {
 
-        MatchRecordService.ExecutionResult result = matchRecordService.executeAndSaveResult(matchId, playerId, request);
+        MatchRecordService.ExecutionResult result;
+        try {
+            result = matchRecordService.executeAndSaveResult(matchId, playerId, request);
+        } catch (IllegalArgumentException e) {
+            // Unknown language or a problem whose method metadata cannot be
+            // judged in the requested language: the client sent bad input.
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
 
         // Broadcast with test progress data
         MatchEvent event = new MatchEvent(playerId, result.status(), result.passedCount(), result.totalCount());

@@ -4,6 +4,7 @@ import com.aegis.arena_service.model.DailyQuestion;
 import com.aegis.arena_service.model.Problem;
 import com.aegis.arena_service.repository.DailyQuestionRepository;
 import com.aegis.arena_service.repository.ProblemRepository;
+import com.aegis.arena_service.services.ProblemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ public class DailyQuestionController {
 
     private final DailyQuestionRepository dailyQuestionRepository;
     private final ProblemRepository problemRepository;
+    private final ProblemService problemService;
 
     /**
      * PUBLIC endpoint — returns today's active daily challenge.
@@ -47,6 +49,7 @@ public class DailyQuestionController {
         if (activeOpt.isPresent()) {
             DailyQuestion active = activeOpt.get();
             return problemRepository.findById(active.getProblemId())
+                    .map(problemService::withStartingCode)
                     .map(problem -> {
                         // Attach window metadata without leaking future problems
                         Map<String, Object> response = new LinkedHashMap<>();
