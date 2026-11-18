@@ -11,6 +11,7 @@ import com.aegis.assessment_service.repository.AssessmentRepository;
 import com.aegis.assessment_service.repository.LeaderboardRecordRepository;
 import com.aegis.assessment_service.util.AssessmentClock;
 import com.aegis.assessment_service.util.AssessmentPolicy;
+import com.aegis.judge.harness.StarterCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -327,6 +328,12 @@ public class AssessmentService {
         safe.setDifficulty(problem.getDifficulty());
         safe.setDescription(problem.getDescription());
         safe.setStartingCodeJava(problem.getStartingCodeJava());
+        safe.setStartingCode(StarterCode.forProblem(
+                problem.getStartingCode(),
+                problem.getStartingCodeJava(),
+                problem.getMethodName(),
+                problem.getReturnType(),
+                problem.getParameterTypes()));
         safe.setTimeLimitMs(problem.getTimeLimitMs());
         safe.setMemoryLimitKb(problem.getMemoryLimitKb());
         safe.setMethodName(problem.getMethodName());

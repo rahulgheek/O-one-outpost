@@ -7,6 +7,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -24,6 +25,12 @@ public class CompanyProblem {
 
     private List<TestCase> testCases;
     private String startingCodeJava;
+
+    /**
+     * Optional per-language starter-code overrides, keyed by judge language id.
+     * Candidate-facing responses always carry a fully resolved map.
+     */
+    private Map<String, String> startingCode;
 
     private int timeLimitMs;
     private int memoryLimitKb;
