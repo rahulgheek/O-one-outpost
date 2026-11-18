@@ -22,6 +22,63 @@ spring:
 internal:
   secret: ${INTERNAL_SECRET:}
 
+# =============================================================================
+# Judge configuration
+# =============================================================================
+# This deployment runs submissions exclusively through OnlineCompiler.io.
+# It needs no Docker host, Docker CLI, or Docker socket. The warm Docker
+# ContainerPool code is retained in the repository for a future secondary
+# backend, but it has no runtime configuration here and stays inactive while
+# backend=onlinecompiler.
+judge:
+  enabled: ${JUDGE_ENABLED:true}
+  # Keep this on onlinecompiler. Selecting docker without an explicit
+  # JUDGE_DOCKER_HOST / JUDGE_DOCKER_SSH_HOST now fails startup by design.
+  backend: ${JUDGE_EXECUTION_BACKEND:onlinecompiler}
+  # Explicit API-only mode: the service starts without executing code and every
+  # execution request fails closed with SYSTEM_ERROR.
+  api-only-mode: ${JUDGE_API_ONLY_MODE:false}
+
+  online-compiler:
+    # Server-side secret. Never expose this key to the browser.
+    api-key: ${ONLINECOMPILER_API_KEY:}
+    base-url: ${ONLINECOMPILER_BASE_URL:https://api.onlinecompiler.io}
+    # Java ID listed at https://onlinecompiler.io/docs/compilers
+    compiler: ${ONLINECOMPILER_COMPILER:openjdk-25}
+    connect-timeout-ms: ${ONLINECOMPILER_CONNECT_TIMEOUT_MS:5000}
+    # The provider's per-run ceiling is 30s; keep HTTP headroom above it.
+    response-timeout-ms: ${ONLINECOMPILER_RESPONSE_TIMEOUT_MS:45000}
+    queue-timeout-ms: ${ONLINECOMPILER_QUEUE_TIMEOUT_MS:30000}
+    # Free/Starter accounts allow 4 simultaneous runs.
+    max-concurrency: ${ONLINECOMPILER_MAX_CONCURRENCY:4}
+    # Retries apply only to HTTP 429/503 (nothing has run yet).
+    max-retries: ${ONLINECOMPILER_MAX_RETRIES:2}
+    retry-base-ms: ${ONLINECOMPILER_RETRY_BASE_MS:750}
+    retry-max-ms: ${ONLINECOMPILER_RETRY_MAX_MS:5000}
+    max-code-bytes: ${ONLINECOMPILER_MAX_CODE_BYTES:100000}
+    max-input-bytes: ${ONLINECOMPILER_MAX_INPUT_BYTES:5242880}
+    # The provider's memory figure includes mapped JVM/runtime files (~230MB
+    # for plain Java). This explicit headroom avoids false MLE verdicts. It is
+    # never adjusted automatically.
+    memory-headroom-mb: ${ONLINECOMPILER_MEMORY_HEADROOM_MB:256}
+    # Provider plan ceiling: 512 MB on Free/Starter, up to 2048 MB on Pro.
+    max-memory-mb: ${ONLINECOMPILER_MAX_MEMORY_MB:512}
+    # Loopback mock-server tests only. Keep false in production.
+    allow-insecure-http: ${ONLINECOMPILER_ALLOW_INSECURE_HTTP:false}
+
+  execution:
+    default-time-limit-ms: ${DEFAULT_TIME_LIMIT_MS:2000}
+    max-time-limit-ms: ${MAX_TIME_LIMIT_MS:10000}
+    default-memory-limit-mb: ${DEFAULT_MEMORY_LIMIT_MB:256}
+    max-memory-limit-mb: ${MAX_MEMORY_LIMIT_MB:512}
+    min-memory-limit-mb: ${MIN_MEMORY_LIMIT_MB:64}
+    # Explicit reference-environment calibration only. This is never adjusted
+    # automatically from host load or CPU speed.
+    time-limit-multiplier: ${JUDGE_TIME_LIMIT_MULTIPLIER:1.0}
+    # Docker submission ceiling. The online backend enforces the lower
+    # ONLINECOMPILER_MAX_CODE_BYTES value during request validation.
+    max-code-bytes: ${JUDGE_MAX_CODE_BYTES:262144}
+
 logging:
   level:
     com.aegis.code_sandbox: ${LOG_LEVEL_SANDBOX:INFO}

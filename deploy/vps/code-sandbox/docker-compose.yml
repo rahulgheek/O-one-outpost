@@ -34,21 +34,37 @@ services:
       - .env
     environment:
       SERVER_PORT: "8085"
+      # This Compose stack is the secondary Docker backend; it must be selected
+      # explicitly because the application defaults to OnlineCompiler.io.
+      JUDGE_EXECUTION_BACKEND: "docker"
+      # Local socket on this dedicated Docker VPS. For a remote daemon set
+      # JUDGE_DOCKER_HOST=ssh://... or tcp://...:2376 (mTLS) in .env and remove
+      # the socket mount/group_add below. The judge never falls back to a local
+      # socket on its own; this explicit default is what satisfies the guard.
+      JUDGE_DOCKER_HOST: ${JUDGE_DOCKER_HOST:-unix:///var/run/docker.sock}
     expose:
       - "8085"
     volumes:
-      # Docker-in-Docker via the host socket. This is root-equivalent on the
-      # host. Use a dedicated VPS and never expose this port publicly.
+      # Docker Engine API access through the host socket. This is
+      # root-equivalent on the host: use a dedicated VPS and never expose 8085.
+      # Remove this mount when using SSH/mTLS instead.
       - /var/run/docker.sock:/var/run/docker.sock
     group_add:
       - "${DOCKER_GID:-999}"
-    mem_limit: 1g
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 384m
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8085/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 90s
     networks:
       - sandbox_net
 

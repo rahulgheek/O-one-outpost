@@ -69,8 +69,13 @@ services:
       - "8085:8085"
     env_file:
       - ./code-sandbox/.env
+    environment:
+      - JUDGE_EXECUTION_BACKEND=${JUDGE_EXECUTION_BACKEND:-docker}
+      - JUDGE_DOCKER_HOST=${JUDGE_DOCKER_HOST:-unix:///var/run/docker.sock}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "${DOCKER_GID:-999}"
 
   gateway-service:
     build: ./gateway-service

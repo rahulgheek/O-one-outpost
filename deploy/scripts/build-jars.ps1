@@ -67,3 +67,4 @@ foreach ($service in $Services) {
 Write-Host ""
 Write-Host "All requested services built." -ForegroundColor Green
 Write-Host "Next: upload each app.jar to its Botkeep Java workload." -ForegroundColor Yellow
+Write-Host "code-sandbox is deployed separately: see deploy/pterodactyl/code-sandbox.md" -ForegroundColor Yellow

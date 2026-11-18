@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "installedBy": "skillforge-skills@1.0.0",
+  "updatedAt": "2026-10-21T09:38:48.678Z",
+  "skills": {
+    "docs": {
+      "name": "docs",
+      "adapter": "universal",
+      "targetDir": ".agents/skills/docs",
+      "installedAt": "2026-10-21T09:38:48.676Z",
+      "version": "1.0.0",
+      "description": "Master specification for software documentation practices across the SDLC (requirements, architecture, technical API, user manuals, and maintenance).",
+      "files": [
+        {
+          "path": ".agents/skills/docs/SKILL.md",
+          "sha256": "83662fdd2c498acfa977aa2cf39a9b3e8726d884ad441f50925d4d0fb74ba506"
+        }
+      ]
+    }
+  }
+}

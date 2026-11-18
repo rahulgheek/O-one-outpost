@@ -44,7 +44,7 @@ The system is broken down into independent, highly cohesive microservices that c
 | **Analytics Service** | `8082` | Aggregates user metrics, match histories, and platform statistics. |
 | **Assessment Service**| `8083` | Manages candidate test sessions, tracking progress, and evaluations. |
 | **Arena Service** | `8084` | Manages real-time coding matches, daily questions, and WebSockets for live collaborative events. |
-| **Code Sandbox** | `8085` | A highly secure, isolated execution engine. It dynamically provisions "warm" Docker containers to compile and run untrusted user code safely. |
+| **Code Sandbox** | `8085` | A highly secure execution engine. By default it compiles and runs Java submissions through OnlineCompiler.io; an optional warm Docker container pool is available as a secondary backend. |
 
 ---
 
@@ -86,7 +86,7 @@ docker compose up --build -d
 docker logs -f gateway
 ```
 
-> **Note on the Sandbox**: The Code Sandbox mounts `/var/run/docker.sock`. Ensure your Docker daemon allows this mount, as the sandbox needs it to spawn ephemeral containers for code execution.
+> **Note on the Sandbox**: The local Compose stack uses the secondary Docker backend and mounts `/var/run/docker.sock` so it can spawn ephemeral executor containers. The production sandbox uses OnlineCompiler.io and needs no Docker host or socket.
 
 ### 3. Starting the Frontend
 Open a new terminal window and start the Vite development server:
@@ -100,14 +100,16 @@ Your frontend will now be accessible at `http://localhost:5173`.
 
 ---
 
-## ☁️ Production Deployment Guide (Botkeep + Docker VPS)
+## ☁️ Production Deployment Guide (Botkeep + OnlineCompiler.io)
 
 Production is split into independently deployable services:
 
 - **Five Botkeep Java workloads** (2 GB each): gateway, auth, arena, assessment, analytics.
-- **One Docker VPS** for `code-sandbox`, because the sandbox mounts the Docker socket and spawns executor containers.
+- **One `code-sandbox` Java workload** on Pterodactyl or any Java 21 host. It sends submissions to the **OnlineCompiler.io HTTPS API**, so no Docker host is required.
 - **Vercel** for the React frontend.
 - **Managed data services**: MongoDB Atlas, Neon PostgreSQL, Upstash Redis, Brevo SMTP.
+
+The original warm Docker container pool is preserved as a secondary backend. It is inactive unless `JUDGE_EXECUTION_BACKEND=docker` and an explicit `JUDGE_DOCKER_HOST` or `JUDGE_DOCKER_SSH_HOST` are set; see `deploy/pterodactyl/code-sandbox.md`.
 
 Each service has its own `.env.example` and is configured through the Botkeep Environment panel. There is no shared `.env.prod`.
 
@@ -134,9 +136,11 @@ For each backend service:
 5. Paste the variables from that service's `.env.example` into the Environment panel.
 6. Attach the custom domain (`api`, `auth`, `arena`, `assessment`, `analytics`).
 
-### 3. Deploy the sandbox VPS
+### 3. Deploy the sandbox
 
-Follow `deploy/vps/code-sandbox/README.md`. Caddy terminates TLS for `sandbox.yourdomain.com`; Docker runs the sandbox orchestrator and its warm executor containers.
+Follow `deploy/pterodactyl/onlinecompiler.md`. Run `code-sandbox` as a Java 21 server on Pterodactyl (or a VPS), put TLS in front of it for `sandbox.yourdomain.com`, and set `ONLINECOMPILER_API_KEY` plus `JUDGE_EXECUTION_BACKEND=onlinecompiler` in the environment. No Docker host is involved.
+
+The secondary Docker path is described in `deploy/vps/code-sandbox/README.md` and requires `JUDGE_EXECUTION_BACKEND=docker` plus an explicit `JUDGE_DOCKER_HOST` or `JUDGE_DOCKER_SSH_HOST`.
 
 ### 4. Deploy the frontend
 
@@ -152,11 +156,11 @@ The root `docker-compose.prod.yml` and `.github/workflows/deploy.yml` still desc
 
 ## 🛡️ Security & Sandbox Architecture
 
-Executing untrusted user code is inherently dangerous. O(1) Outpost mitigates this risk through a robust **Code Sandbox Architecture**:
+Executing untrusted user code is inherently dangerous. O(1) Outpost mitigates this risk with two interchangeable execution backends:
 
-1. **Warm Container Pool**: To eliminate cold-start latency, the sandbox maintains a pool of pre-warmed, idle Docker containers (`eclipse-temurin:17-alpine`).
-2. **Ephemeral Execution**: When a user submits code, it is injected into a warm container, executed, and the container is instantly destroyed and replaced.
-3. **Hardened Restrictions**:
+1. **OnlineCompiler.io (default)**: submissions are compiled and run in the provider's fresh, network-isolated sandbox over HTTPS. The API key is server-side only. This removes the need to operate a Docker host.
+2. **Warm Docker Container Pool (secondary)**: when `JUDGE_EXECUTION_BACKEND=docker`, the sandbox keeps pre-warmed, idle Docker containers (`eclipse-temurin:17-alpine`), injects the submission, then destroys and replaces the container after every run.
+3. **Hardened Docker restrictions** (secondary backend only):
    - `--network none`: No internet access for executing code.
    - Memory and CPU are strictly capped (`--memory=128m`, `--cpus=0.5`).
    - Read-only filesystems with small, temporary `tmpfs` mounts to prevent malicious disk writes.

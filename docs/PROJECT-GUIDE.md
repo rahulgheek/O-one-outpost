@@ -49,7 +49,7 @@ Web client -----> API Gateway -----> Auth Service
 | `arena-service` | Public problems, daily questions, competitive matches, player profiles | Java, Spring Boot, MongoDB |
 | `assessment-service` | Company problems and assessments, candidate workflows, submissions, leaderboards | Java, Spring Boot, MongoDB |
 | `analytics-service` | Analytics streams, audit records, and system metrics | Java, Spring Boot |
-| `code-sandbox` | Accepts execution requests and orchestrates isolated code execution | Java, Spring Boot, Docker |
+| `code-sandbox` | Accepts execution requests and runs them via the OnlineCompiler.io HTTPS API (secondary: warm Docker pool) | Java, Spring Boot |
 
 Service port numbers and published host ports are deployment-specific. Consult
 the relevant Compose file and service configuration before relying on a port.
@@ -167,8 +167,10 @@ application configuration and Compose setup. Supply secrets through your local
 secret/configuration mechanism; do not commit them. Do not copy production
 credentials into development.
 
-The sandbox requires access to Docker to provision executor containers. Its
-Docker socket access is privileged; use a trusted development host and read the
+The sandbox sends submissions to the OnlineCompiler.io HTTPS API by default and
+needs only an `ONLINECOMPILER_API_KEY`. The optional Docker backend requires an
+explicit `JUDGE_DOCKER_HOST` or `JUDGE_DOCKER_SSH_HOST` plus access to a Docker
+Engine, and is privileged; use a trusted development host and read the
 [deployment security notes](./README-deployment.md) before enabling it.
 
 ### Start the web client
@@ -217,9 +219,13 @@ gateway and verify the relevant Compose services together.
 - The deployment documentation describes an internal shared-secret header in
   addition to network isolation. Treat secrets as secrets and rotate them
   through the deployment process.
-- The sandbox executes untrusted code by asking the host Docker daemon to
-  create constrained, ephemeral containers. Mounting the Docker socket gives
-  the sandbox substantial host-level authority; this is a material trust
+- The sandbox executes untrusted code remotely through OnlineCompiler.io by
+  default. The API key is server-side only, and submissions leave your
+  infrastructure and are processed by the provider; confirm this matches your
+  data-handling policy.
+- The optional Docker backend executes untrusted code by asking the host Docker
+  daemon to create constrained, ephemeral containers. Mounting the Docker socket
+  gives the sandbox substantial host-level authority; this is a material trust
   boundary, not a substitute for host isolation.
 - Execution containers are documented as using resource limits, disabled
   networking, read-only filesystems, and temporary writable mounts. Keep
