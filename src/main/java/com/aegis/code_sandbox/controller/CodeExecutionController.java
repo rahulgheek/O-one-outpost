@@ -3,6 +3,7 @@ package com.aegis.code_sandbox.controller;
 import com.aegis.code_sandbox.config.JudgeProperties;
 import com.aegis.code_sandbox.dto.ExecutionRequest;
 import com.aegis.code_sandbox.dto.ExecutionResult;
+import com.aegis.code_sandbox.judge.Language;
 import com.aegis.code_sandbox.service.CodeExecutionService;
 import com.aegis.code_sandbox.service.ContainerPool;
 import org.springframework.http.HttpHeaders;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/sandbox")
@@ -68,6 +71,14 @@ public class CodeExecutionController {
     public ResponseEntity<SandboxStatus> status() {
         ContainerPool.PoolStatus pool = containerPool.status();
         JudgeProperties.OnlineCompiler online = properties.getOnlineCompiler();
+        List<SandboxLanguage> languages = Arrays.stream(Language.values())
+                .map(language -> new SandboxLanguage(
+                        language.id(),
+                        language.displayName(),
+                        online.compilerFor(language),
+                        language.editorLanguage(),
+                        language.dockerSupported()))
+                .toList();
         SandboxStatus status = new SandboxStatus(
                 properties.isExecutionEnabled(),
                 properties.normalizedBackend(),
@@ -90,7 +101,8 @@ public class CodeExecutionController {
                         online.getMaxCodeBytes(),
                         online.getResponseTimeoutMs(),
                         online.getMemoryHeadroomMb(),
-                        online.getMaxMemoryMb()));
+                        online.getMaxMemoryMb()),
+                languages);
         return ResponseEntity.ok(status);
     }
 
@@ -98,6 +110,8 @@ public class CodeExecutionController {
         if (request == null || request.code() == null || request.code().isBlank()) {
             throw new IllegalArgumentException("code is required");
         }
+        // Rejects unknown ids with HTTP 400 before any provider quota is used.
+        Language.resolve(request.language());
         int codeBytes = request.code().getBytes(StandardCharsets.UTF_8).length;
         if (codeBytes > properties.effectiveMaxCodeBytes()) {
             throw new IllegalArgumentException("code exceeds the "
@@ -130,7 +144,17 @@ public class CodeExecutionController {
             int maxMemoryLimitMb,
             double timeLimitMultiplier,
             ContainerPool.PoolStatus pool,
-            OnlineCompilerStatus onlineCompiler
+            OnlineCompilerStatus onlineCompiler,
+            List<SandboxLanguage> languages
+    ) {
+    }
+
+    public record SandboxLanguage(
+            String id,
+            String displayName,
+            String compiler,
+            String editorLanguage,
+            boolean dockerSupported
     ) {
     }
 

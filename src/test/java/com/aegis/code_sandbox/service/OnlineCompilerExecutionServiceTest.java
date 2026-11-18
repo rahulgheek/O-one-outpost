@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -32,7 +33,7 @@ class OnlineCompilerExecutionServiceTest {
 
     @Test
     void acceptsHarnessOutputAndReportsProviderMetrics() {
-        when(client.run(anyString(), anyString(), anyInt(), anyInt())).thenReturn(response(
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
                 "PROGRESS|3/3\nALL_TESTS_PASSED\n", "", "success", 0, null, false,
                 "0.250", "0.400", "240000"));
 
@@ -47,12 +48,12 @@ class OnlineCompilerExecutionServiceTest {
         assertEquals(3, result.passedTests());
         assertEquals(3, result.totalTests());
         assertEquals(0, result.exitCode());
-        verify(client).run(eq(CODE), eq(""), eq(2_000), eq(512));
+        verify(client).run(eq(CODE), eq(""), eq(2_000), eq(512), eq("openjdk-25"));
     }
 
     @Test
     void providerTimeoutIsATimeLimitExceededVerdict() {
-        when(client.run(anyString(), anyString(), anyInt(), anyInt())).thenReturn(response(
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
                 "", "Time limit exceeded", "error", 124, null, false,
                 "1.000", "1.100", "230000"));
 
@@ -65,7 +66,7 @@ class OnlineCompilerExecutionServiceTest {
 
     @Test
     void providerMemoryKillIsAMemoryLimitExceededVerdict() {
-        when(client.run(anyString(), anyString(), anyInt(), anyInt())).thenReturn(response(
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
                 "", "Memory limit exceeded: the program used 550 MB", "error", 137, 9, false,
                 "0.500", "0.600", "563200"));
 
@@ -78,7 +79,7 @@ class OnlineCompilerExecutionServiceTest {
 
     @Test
     void compilerDiagnosticsAreACompilationError() {
-        when(client.run(anyString(), anyString(), anyInt(), anyInt())).thenReturn(response(
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
                 "", "Main.java:3: error: illegal start of expression", "error", 1, null, false,
                 "0.100", "0.120", "230000"));
 
@@ -92,7 +93,7 @@ class OnlineCompilerExecutionServiceTest {
 
     @Test
     void ordinaryNonZeroExitIsARuntimeError() {
-        when(client.run(anyString(), anyString(), anyInt(), anyInt())).thenReturn(response(
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
                 "", "Exception in thread \"main\" java.lang.IllegalStateException: boom",
                 "error", 1, null, false, "0.200", "0.220", "230000"));
 
@@ -104,7 +105,7 @@ class OnlineCompilerExecutionServiceTest {
 
     @Test
     void harnessWrongAnswerIsPreservedWithPartialCounts() {
-        when(client.run(anyString(), anyString(), anyInt(), anyInt())).thenReturn(response(
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
                 "PROGRESS|1/2\nWRONG_ANSWER|Test Case 2 Failed.\n", "", "success", 0, null, false,
                 "0.300", "0.320", "240000"));
 
@@ -118,7 +119,7 @@ class OnlineCompilerExecutionServiceTest {
 
     @Test
     void compactProviderTimeIsRoundedToMilliseconds() {
-        when(client.run(anyString(), anyString(), anyInt(), anyInt())).thenReturn(response(
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
                 "ALL_TESTS_PASSED", "", "success", 0, null, false,
                 "0.0248", "0.0330", "8192"));
 
@@ -130,13 +131,13 @@ class OnlineCompilerExecutionServiceTest {
 
     @Test
     void inputIsForwardedToTheProvider() {
-        when(client.run(anyString(), anyString(), anyInt(), anyInt())).thenReturn(response(
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
                 "hello", "", "success", 0, null, false, "0.010", "0.020", "8192"));
 
         ExecutionResult result = service.execute(request("World"), 2_000, 256);
 
         assertEquals(Verdict.AC, result.verdict());
-        verify(client).run(eq(CODE), eq("World"), eq(2_000), eq(512));
+        verify(client).run(eq(CODE), eq("World"), eq(2_000), eq(512), eq("openjdk-25"));
     }
 
     @Test
@@ -147,12 +148,12 @@ class OnlineCompilerExecutionServiceTest {
 
         assertEquals(Verdict.CE, result.verdict());
         assertTrue(result.message().contains("10 bytes"));
-        verify(client, never()).run(anyString(), anyString(), anyInt(), anyInt());
+        verify(client, never()).run(anyString(), anyString(), anyInt(), anyInt(), anyString());
     }
 
     @Test
     void providerRateLimitBecomesAnInternalError() {
-        when(client.run(anyString(), anyString(), anyInt(), anyInt()))
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString()))
                 .thenThrow(new OnlineCompilerException(429, "at capacity"));
 
         ExecutionResult result = service.execute(request(null), 2_000, 256);
@@ -160,6 +161,74 @@ class OnlineCompilerExecutionServiceTest {
         assertEquals(Verdict.IE, result.verdict());
         assertTrue(result.message().contains("capacity"));
         assertNull(result.passedTests());
+    }
+
+    @Test
+    void routesPythonToThePythonCompiler() {
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), eq("python-3.14")))
+                .thenReturn(response("PROGRESS|1/1\nALL_TESTS_PASSED\n", "", "success", 0, null,
+                        false, "0.100", "0.200", "12000"));
+
+        ExecutionResult result = service.execute(
+                new ExecutionRequest("print(1)", 2_000, 262_144, null, "python"), 2_000, 256);
+
+        assertEquals(Verdict.AC, result.verdict());
+        verify(client).run(eq("print(1)"), eq(""), eq(2_000), eq(512), eq("python-3.14"));
+    }
+
+    @Test
+    void pythonSyntaxErrorsAreCompilationErrors() {
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
+                "", "  File \"code.py\", line 1\n    print(\nSyntaxError: '(' was never closed",
+                "error", 1, null, false, "0.010", "0.020", "8000"));
+
+        ExecutionResult result = service.execute(
+                new ExecutionRequest("print(", 2_000, 262_144, null, "python"), 2_000, 256);
+
+        assertEquals(Verdict.CE, result.verdict());
+        assertTrue(result.plainTextBody().startsWith("COMPILATION_ERROR"));
+    }
+
+    @Test
+    void goCompilerDiagnosticsAreCompilationErrors() {
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
+                "", "# command-line-arguments\n./code.go:5:2: undefined: missing",
+                "error", 1, null, false, "0.010", "0.020", "9000"));
+
+        ExecutionResult result = service.execute(
+                new ExecutionRequest("package main", 2_000, 262_144, null, "go"), 2_000, 256);
+
+        assertEquals(Verdict.CE, result.verdict());
+    }
+
+    @Test
+    void unknownLanguageIsRejectedBeforeExecution() {
+        ExecutionRequest request = new ExecutionRequest("print(1)", 2_000, 262_144, null, "brainfuck");
+
+        assertThrows(IllegalArgumentException.class, () -> service.execute(request, 2_000, 256));
+        verify(client, never()).run(anyString(), anyString(), anyInt(), anyInt(), anyString());
+    }
+
+    @Test
+    void genericProviderCompilationMessageIsStillACompilationError() {
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
+                "", "Compilation failed.", "error", 1, null, false, "0.010", "0.020", "9000"));
+
+        ExecutionResult result = service.execute(
+                new ExecutionRequest("package main", 2_000, 262_144, null, "go"), 2_000, 256);
+
+        assertEquals(Verdict.CE, result.verdict());
+    }
+
+    @Test
+    void genericProviderMemoryMessageIsStillAMemoryLimitExceeded() {
+        when(client.run(anyString(), anyString(), anyInt(), anyInt(), anyString())).thenReturn(response(
+                "", "Memory limit exceeded", "error", 1, null, false, "0.100", "0.120", "9000"));
+
+        ExecutionResult result = service.execute(
+                new ExecutionRequest("print(1)", 2_000, 262_144, null, "python"), 2_000, 256);
+
+        assertEquals(Verdict.MLE, result.verdict());
     }
 
     private static ExecutionRequest request(String input) {

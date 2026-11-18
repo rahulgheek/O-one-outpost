@@ -6,6 +6,7 @@ import com.aegis.code_sandbox.docker.DockerEngine;
 import com.aegis.code_sandbox.dto.ExecutionRequest;
 import com.aegis.code_sandbox.dto.ExecutionResult;
 import com.aegis.code_sandbox.judge.JudgeOutput;
+import com.aegis.code_sandbox.judge.Language;
 import com.aegis.code_sandbox.judge.Verdict;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.exception.NotFoundException;
@@ -70,8 +71,9 @@ public class CodeExecutionService {
             return internalError("Code execution is disabled by the sandbox operator.");
         }
         if (request == null || request.code() == null || request.code().isBlank()) {
-            return internalError("No Java source code was provided.");
+            return internalError("No source code was provided.");
         }
+        Language language = Language.resolve(request.language());
 
         byte[] source = request.code().getBytes(StandardCharsets.UTF_8);
         if (source.length > properties.effectiveMaxCodeBytes()) {
@@ -80,12 +82,19 @@ public class CodeExecutionService {
         }
 
         Limit limit = resolveLimits(request);
-        log.info("Judge request: requested={}ms effective={}ms memory={}MB (requested {}KB, backend={})",
-                limit.requestedTimeMs(), limit.effectiveTimeMs(), limit.memoryMb(),
+        log.info("Judge request: language={} requested={}ms effective={}ms memory={}MB "
+                        + "(requested {}KB, backend={})",
+                language.id(), limit.requestedTimeMs(), limit.effectiveTimeMs(), limit.memoryMb(),
                 limit.requestedMemoryKb(), properties.normalizedBackend());
 
         if (properties.isOnlineCompilerBackend()) {
             return onlineCompiler.execute(request, limit.effectiveTimeMs(), limit.memoryMb());
+        }
+
+        if (!language.dockerSupported()) {
+            return internalError("The " + language.displayName()
+                    + " runtime is only available on the OnlineCompiler backend. "
+                    + "This sandbox is configured for Docker, which supports Java only.");
         }
 
         ContainerPool.WarmContainer container = null;
