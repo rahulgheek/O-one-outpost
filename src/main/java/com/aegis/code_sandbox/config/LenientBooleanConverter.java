@@ -22,6 +22,10 @@ import java.util.Set;
  * {@code on/off}, {@code 1/0}). A genuinely invalid value still fails startup
  * with the same {@code Invalid boolean value} error, and unmatched quotes are
  * left alone so real typos are not hidden.</p>
+ *
+ * <p>{@link UnquotedEnvironmentPostProcessor} normally removes host-injected
+ * quotes from every environment value before binding. This converter remains a
+ * cheap safety net for boolean values that arrive by another route.</p>
  */
 @Component
 @ConfigurationPropertiesBinding

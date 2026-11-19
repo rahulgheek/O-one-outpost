@@ -1,0 +1,4 @@
+# Registered as a Spring Boot environment post-processor so host-injected
+# values are normalized before configuration properties are bound.
+org.springframework.boot.EnvironmentPostProcessor=\
+com.aegis.code_sandbox.config.UnquotedEnvironmentPostProcessor
