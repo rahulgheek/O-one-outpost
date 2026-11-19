@@ -404,6 +404,7 @@ submissions.
 | Symptom | Cause | Fix |
 |---|---|---|
 | Startup fails with `ONLINECOMPILER_API_KEY is required` | Key missing on the onlinecompiler backend | Paste the key into the egg variable / `.env`; use `JUDGE_API_ONLY_MODE=true` only for a non-executing API |
+| Startup fails with `Invalid boolean value '"false"'` | The panel or startup command passed the quotes as part of the value | Set `JUDGE_API_ONLY_MODE=false` (or delete it — the default is `false`) and remove quotes from the egg startup command. `code-sandbox` strips one matching pair of quotes, but unquoted values are the correct configuration |
 | `OnlineCompiler rejected the API key (HTTP 401/403)` | Wrong, expired, or revoked key | Regenerate the key and restart |
 | `OnlineCompiler rate/capacity limit reached (HTTP 429)` | More than 4 concurrent runs, more than 60/min, or provider congestion | Lower `ONLINECOMPILER_MAX_CONCURRENCY`, retry later, or upgrade the plan |
 | `concurrency limit reached locally` | Local semaphore queue expired | Reduce submission concurrency or raise `ONLINECOMPILER_QUEUE_TIMEOUT_MS` |
@@ -411,7 +412,7 @@ submissions.
 | `Could not reach OnlineCompiler` | DNS, egress firewall, or proxy | Allow `api.onlinecompiler.io:443`; verify with `curl -I https://api.onlinecompiler.io/` |
 | Every result is `MLE` | Headroom too small for the JVM | Keep `ONLINECOMPILER_MEMORY_HEADROOM_MB=256`; lower problem memory; check the reported `memoryUsedKb` |
 | Results are slower than Docker | Provider queue and shared sandbox | Keep `MAX_TIME_LIMIT_MS` below 30,000; do not "fix" this with a large multiplier |
-| `CE` for code that worked locally | Provider uses `openjdk-25` single-file mode | Confirm `ONLINECOMPILER_COMPILER=openjdk-25`; keep the generated `Main.java` harness intact |
+| `CE` for code that worked locally | Provider compiler differs from the local toolchain, or the generated harness was edited | Check the compiler for the submitted language (`ONLINECOMPILER_COMPILER_<LANGUAGE>`); keep the generated harness intact and do not rename the `Solution`/method identifiers |
 | `truncated: true` | Output exceeded 64 KB per stream | Expected; the harness protocol lines are small, so treat truncation as a program bug (output flood) |
 | Startup fails with an HTTPS error | `ONLINECOMPILER_BASE_URL` uses plain HTTP | Use `https://api.onlinecompiler.io`; plain HTTP is accepted only for loopback tests with `ONLINECOMPILER_ALLOW_INSECURE_HTTP=true` |
 | Docker pool shows `available: 0` | Docker backend is inactive by design | Set `JUDGE_EXECUTION_BACKEND=docker` plus an explicit `JUDGE_DOCKER_HOST` or `JUDGE_DOCKER_SSH_HOST`, then follow [`code-sandbox.md`](./code-sandbox.md) |
