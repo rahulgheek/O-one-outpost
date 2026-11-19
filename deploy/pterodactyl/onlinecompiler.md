@@ -197,6 +197,13 @@ JUDGE_API_ONLY_MODE=false
 
 Full template: [`code-sandbox/.env.example`](../../code-sandbox/.env.example).
 
+Some panels (including Botkeep-style eggs) pass surrounding quotes as part of
+every value. At startup `code-sandbox` removes one matching pair of single or
+double quotes from `systemEnvironment` and `systemProperties`, covering
+booleans, numbers, doubles, URLs, compiler ids and the API key. No values are
+logged. Prefer unquoted values anyway: the normalization is a compatibility
+layer for host behaviour, not part of the configuration format.
+
 The sandbox accepts the eight judge language ids below. `ONLINECOMPILER_COMPILER`
 is still the Java fallback; set `ONLINECOMPILER_COMPILER_<LANGUAGE>` to pin a
 different provider runtime for one language.
@@ -404,7 +411,8 @@ submissions.
 | Symptom | Cause | Fix |
 |---|---|---|
 | Startup fails with `ONLINECOMPILER_API_KEY is required` | Key missing on the onlinecompiler backend | Paste the key into the egg variable / `.env`; use `JUDGE_API_ONLY_MODE=true` only for a non-executing API |
-| Startup fails with `Invalid boolean value '"false"'` | The panel or startup command passed the quotes as part of the value | Set `JUDGE_API_ONLY_MODE=false` (or delete it — the default is `false`) and remove quotes from the egg startup command. `code-sandbox` strips one matching pair of quotes, but unquoted values are the correct configuration |
+| Startup fails with `Invalid boolean value '"false"'` | The panel or startup command passed the quotes as part of the value | Set `JUDGE_API_ONLY_MODE=false` (or delete it — the default is `false`) and remove quotes from the egg startup command. Recent `code-sandbox` builds strip one matching pair from every environment value, but unquoted values are the correct configuration |
+| Startup fails with `NumberFormatException: For input string: ""256""` | Same quoting problem on a numeric value | Set `DEFAULT_MEMORY_LIMIT_MB=256` and the other numeric variables without quotes, or restart on a build that includes `UnquotedEnvironmentPostProcessor`. Check every value on the Startup tab, not only the one named in the error |
 | `OnlineCompiler rejected the API key (HTTP 401/403)` | Wrong, expired, or revoked key | Regenerate the key and restart |
 | `OnlineCompiler rate/capacity limit reached (HTTP 429)` | More than 4 concurrent runs, more than 60/min, or provider congestion | Lower `ONLINECOMPILER_MAX_CONCURRENCY`, retry later, or upgrade the plan |
 | `concurrency limit reached locally` | Local semaphore queue expired | Reduce submission concurrency or raise `ONLINECOMPILER_QUEUE_TIMEOUT_MS` |
