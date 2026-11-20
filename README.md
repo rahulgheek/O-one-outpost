@@ -73,7 +73,7 @@ Security is a priority; therefore, no secrets are committed to the repository. Y
   * `code-sandbox/.env`
   * `O-one-outpost-web/.env`
 
-* **Networking Note**: When running locally via Docker Desktop, ensure your inter-service URLs (like `AUTH_SERVICE_URL`) point to `http://host.docker.internal:<PORT>` so the containers can route traffic correctly.
+* **Networking Note**: If a service runs inside Docker Desktop while its dependencies run on the host, point its inter-service URLs (like `AUTH_SERVICE_URL`) at `http://host.docker.internal:<PORT>`. If every service runs natively (IntelliJ or `mvn spring-boot:run`), use `http://127.0.0.1:<PORT>`; a stale `host.docker.internal` hosts entry can resolve to an old LAN IP and cause gateway `ConnectTimeoutException`s.
 
 ### 2. Bootstrapping the Backend
 We utilize `docker-compose.yml` to orchestrate the entire backend locally.
